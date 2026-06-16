@@ -1,29 +1,60 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 // Impor ikon lengkap termasuk alternatif aman agar bebas dari error ekspor Vite
 import { AiOutlineSearch, AiOutlinePlus, AiOutlineMore, AiOutlineEdit, AiOutlineDelete, AiOutlineWarning } from "react-icons/ai";
-import dataDosenLokal from "../../../data/DosenData.json"; 
+import { dosenAPI } from "../../../services/dosenAPI"; // IMPOR API DOSEN YANG SUDAH KITA BUAT
 import TambahDosen from "./TambahDosen";
-import EditDosen from "./EditDosen"; // Pastikan impor komponen edit baru terpasang
+import EditDosen from "./EditDosen"; 
 
 const MasterDosen = () => {
-  const [dataDosen, setDataDosen] = useState(dataDosenLokal || []);
+  // BERSIHKAN DATA LOKAL: Ganti inisialisasi awal ke array kosong
+  const [dataDosen, setDataDosen] = useState([]);
   const [cari, setCari] = useState("");
   const [filterProdi, setFilterProdi] = useState("Semua Program Studi");
   const [filterStatus, setFilterStatus] = useState("Semua Status");
   
-  const [isTambahTerbuka, setIsTambahTerbuka] = useState(false);
+  // STATE BARU: Untuk indikator pemuatan data dan penanganan eror
+  const [isLoading, setIsLoading] = useState(true);
+  const [pesanEror, setPesanEror] = useState("");
 
-  // State baru untuk penanganan aksi taktis klik edit & hapus
+  const [isTambahTerbuka, setIsTambahTerbuka] = useState(false);
   const [dropdownAktif, setDropdownAktif] = useState(null); 
   const [dataTerpilih, setDataTerpilih] = useState(null);   
   const [isEditTerbuka, setIsEditTerbuka] = useState(false);
   const [isHapusTerbuka, setIsHapusTerbuka] = useState(false);
 
+  // ==========================================
+  // 1. FUNGSI MEMBACA DATA (READ FROM DATABASE)
+  // ==========================================
+  const muatDataDosenDariDatabase = async () => {
+    setIsLoading(true);
+    setPesanEror("");
+    try {
+      const data = await dosenAPI.fetchDosen();
+      setDataDosen(data);
+    } catch (error) {
+      console.error("Gagal memuat data dosen:", error);
+      setPesanEror("Gagal mengambil data dosen dari server Supabase.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Jalankan penarikan data secara otomatis saat komponen pertama kali di-mount
+  useEffect(() => {
+    muatDataDosenDariDatabase();
+  }, []);
+
+  // ==========================================
+  // 2. FUNGSI TAMBAH DATA (CREATE SINKRON)
+  // ==========================================
   const tanganiTambahDosenLokal = (dosenBaru) => {
+    // Parameter dosenBaru didapatkan setelah form modal TambahDosen sukses mengirim data ke database
     setDataDosen([dosenBaru, ...dataDosen]);
   };
 
-  // Fungsi penangan pembaruan data dosen dari form edit
+  // ==========================================
+  // 3. FUNGSI EDIT DATA (UPDATE SINKRON)
+  // ==========================================
   const tanganiEditDosenLokal = (dataTerupdate) => {
     const hasilUpdate = dataDosen.map((dsn) =>
       dsn.nidn === dataTerupdate.nidn ? dataTerupdate : dsn
@@ -31,11 +62,24 @@ const MasterDosen = () => {
     setDataDosen(hasilUpdate);
   };
 
-  // Fungsi penangan eliminasi data dosen dari list tabel
-  const tanganiHapusDosenLokal = () => {
-    const dataSisa = dataDosen.filter((dsn) => dsn.nidn !== dataTerpilih.nidn);
-    setDataDosen(dataSisa);
-    setIsHapusTerbuka(false);
+  // ==========================================
+  // 4. FUNGSI HAPUS DATA (DELETE FROM DATABASE)
+  // ==========================================
+  const tanganiHapusDosenLokal = async () => {
+    if (!dataTerpilih) return;
+    
+    try {
+      // Eksekusi penghapusan di server Supabase berdasarkan NIDN
+      await dosenAPI.deleteDosen(dataTerpilih.nidn);
+      
+      // Update tampilan UI jika sukses terhapus di server
+      const dataSisa = dataDosen.filter((dsn) => dsn.nidn !== dataTerpilih.nidn);
+      setDataDosen(dataSisa);
+      setIsHapusTerbuka(false);
+      alert(`Berhasil menghapus berkas dosen: ${dataTerpilih.nama}`);
+    } catch (error) {
+      alert(error.message || "Gagal menghapus data dosen di server.");
+    }
   };
 
   const dosenTerfilter = dataDosen.filter((dsn) => {
@@ -108,8 +152,16 @@ const MasterDosen = () => {
         </div>
       </div>
 
-      {/* AREA TABEL UTAMA (Diubah menjadi overflow-visible agar menu dropdown melayang tidak terpotong) */}
+      {/* AREA TABEL UTAMA */}
       <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-visible">
+        
+        {/* ELEMEN KRITIS: TAMPILKAN EROR JIKA KONEKSI SUPABASE GAGAL */}
+        {pesanEror && (
+          <div className="p-4 m-4 bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-xl">
+            {pesanEror}
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -123,7 +175,15 @@ const MasterDosen = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-600">
-              {dosenTerfilter.length > 0 ? (
+              
+              {/* LAYOUT KONDISIONAL: JIKA SEDANG MEMUAT DATA DARI SERVER */}
+              {isLoading ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-12 text-center text-slate-400 font-bold bg-slate-50/10 tracking-wider">
+                    Menghubungkan ke Database Supabase...
+                  </td>
+                </tr>
+              ) : dosenTerfilter.length > 0 ? (
                 dosenTerfilter.map((dsn, idx) => (
                   <tr key={dsn.nidn} className="hover:bg-slate-50/40 transition">
                     <td className="px-6 py-4.5 font-bold text-sm font-medium text-slate-900">{dsn.nidn}</td>
@@ -185,7 +245,7 @@ const MasterDosen = () => {
               ) : (
                 <tr>
                   <td colSpan="6" className="px-6 py-10 text-center text-slate-400 font-semibold bg-slate-50/20">
-                    Data dosen tidak ditemukan.
+                    Data dosen tidak ditemukan di database.
                   </td>
                 </tr>
               )}

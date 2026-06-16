@@ -9,7 +9,8 @@ import {
   AiOutlineFileText
 } from 'react-icons/ai';
 
-const Sidebar = () => {
+// PERBAIKAN: Terima props onLogout di sini
+const Sidebar = ({ onLogout }) => {
   const location = useLocation();
 
   const menuItems = [
@@ -45,7 +46,6 @@ const Sidebar = () => {
               <Link
                 key={menu.path}
                 to={menu.path}
-                /* MODIFIKASI: Mengubah font-bold menjadi font-semibold/font-bold terstandar dengan tracking-wider */
                 className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 ${isActive
                     ? 'bg-blue-50 text-blue-700 shadow-sm'
                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
@@ -61,13 +61,16 @@ const Sidebar = () => {
         </nav>
       </div>
 
-      {/* Tombol Ganti Peran */}
+      {/* Tombol Logout */}
       <div className="p-4 border-t border-slate-100 mt-auto">
-        {/* MODIFIKASI: Menyelaraskan teks Logout menjadi font-bold, tracking-wider, dan uppercase */}
-        <Link to="/guest" className="flex items-center gap-4 px-4 py-3 rounded-xl text-xs font-bold tracking-wider uppercase text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all duration-200">
+        {/* PERBAIKAN: Mengubah Link menjadi Button dan menambahkan onClick={onLogout} */}
+        <button 
+          onClick={onLogout} 
+          className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-xs font-bold tracking-wider uppercase text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all duration-200 border-none cursor-pointer text-left bg-transparent"
+        >
           <BiLogOutCircle className="text-xl" />
           <span>Logout</span>
-        </Link>
+        </button>
       </div>
 
     </aside>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { AiOutlineClose } from "react-icons/ai";
+import { dosenAPI } from "../../../services/dosenAPI"; // IMPOR SERVICE API DOSEN
 
 const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit }) => {
   const [inputEdit, setInputEdit] = useState({
@@ -9,6 +10,9 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
     email: "",
     status: "Aktif",
   });
+
+  // STATE BARU: Indikator animasi loading saat memproses update ke database
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sinkronisasi data dosen yang dipilih ke dalam state form edit
   useEffect(() => {
@@ -25,20 +29,36 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
 
   if (!isEditTerbuka) return null;
 
-  const tanganiUbahDosen = (e) => {
+  // LOGIKA UTAMA: MEMPERBARUI DATA KE SUPABASE
+  const tanganiUbahDosen = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true); // Kunci tombol form
 
     const dataSiapUpdate = {
-      nidn: inputEdit.nidn.trim(),
       nama: inputEdit.nama.trim(),
       program_studi: inputEdit.program_studi,
       email: inputEdit.email.trim(),
       status: inputEdit.status
+      // nidn tidak perlu dikirim di dalam body data karena digunakan sebagai parameter filter URL
     };
 
-    // Kirim data yang diperbarui ke fungsi induk di MasterDosen.jsx
-    onSuksesEdit(dataSiapUpdate);
-    setIsEditTerbuka(false);
+    try {
+      // 1. Tembak perubahan data ke server Supabase menggunakan parameter NIDN
+      await dosenAPI.updateDosen(inputEdit.nidn, dataSiapUpdate);
+
+      // 2. Kirim balik data utuh (termasuk NIDN) ke state lokal MasterDosen agar tabel langsung berubah
+      onSuksesEdit({ nidn: inputEdit.nidn, ...dataSiapUpdate });
+      
+      // 3. Tutup modal edit
+      setIsEditTerbuka(false);
+      
+      alert("Perubahan data dosen berhasil disimpan!");
+    } catch (error) {
+      console.error(error);
+      alert(error.message || "Gagal memperbarui data dosen di server database.");
+    } finally {
+      setIsSubmitting(false); // Buka kembali kunci tombol form
+    }
   };
 
   return (
@@ -58,8 +78,9 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
           
           <button 
             type="button"
+            disabled={isSubmitting}
             onClick={() => setIsEditTerbuka(false)}
-            className="text-slate-400 hover:text-slate-900 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition border border-slate-200 flex items-center gap-2 text-xs font-bold"
+            className="text-slate-400 hover:text-slate-900 p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition border border-slate-200 flex items-center gap-2 text-xs font-bold disabled:opacity-50"
           >
             <AiOutlineClose className="text-sm" />
             <span>Tutup</span>
@@ -86,10 +107,11 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
             <input
               type="text"
               required
+              disabled={isSubmitting}
               placeholder="Contoh: Dr. Nama Dosen, M.T."
               value={inputEdit.nama}
               onChange={(e) => setInputEdit({ ...inputEdit, nama: e.target.value })}
-              className="w-full bg-slate-50 text-slate-900 text-xs font-medium px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-black focus:bg-white transition"
+              className="w-full bg-slate-50 text-slate-900 text-xs font-medium px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-black focus:bg-white transition disabled:opacity-60"
             />
           </div>
 
@@ -98,9 +120,10 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Program Studi </label>
             <select
               required
+              disabled={isSubmitting}
               value={inputEdit.program_studi}
               onChange={(e) => setInputEdit({ ...inputEdit, program_studi: e.target.value })}
-              className="w-full bg-slate-50 text-slate-900 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-black focus:bg-white transition cursor-pointer"
+              className="w-full bg-slate-50 text-slate-900 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-black focus:bg-white transition cursor-pointer disabled:opacity-60"
             >
               <option value="D4 Pengolahan dan Penyimpanan Hasil Perikanan">PPHP (D4 Pengolahan Hasil Perikanan)</option>
               <option value="D3 Perikanan Tangkap">PTK (D3 Perikanan Tangkap)</option>
@@ -114,10 +137,11 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
             <input
               type="email"
               required
+              disabled={isSubmitting}
               placeholder="Contoh: dosen@polteksimeulue.ac.id"
               value={inputEdit.email}
               onChange={(e) => setInputEdit({ ...inputEdit, email: e.target.value })}
-              className="w-full bg-slate-50 text-slate-900 text-xs font-medium px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-black focus:bg-white transition"
+              className="w-full bg-slate-50 text-slate-900 text-xs font-medium px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-black focus:bg-white transition disabled:opacity-60"
             />
           </div>
 
@@ -126,9 +150,10 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
             <select
               required
+              disabled={isSubmitting}
               value={inputEdit.status}
               onChange={(e) => setInputEdit({ ...inputEdit, status: e.target.value })}
-              className="w-full bg-slate-50 text-slate-900 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-black focus:bg-white transition cursor-pointer"
+              className="w-full bg-slate-50 text-slate-900 text-xs font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-black focus:bg-white transition cursor-pointer disabled:opacity-60"
             >
               <option value="Aktif">Aktif</option>
               <option value="Nonaktif">Nonaktif</option>
@@ -142,16 +167,18 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
           <div className="max-w-6xl mx-auto flex justify-end gap-4 w-full">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => setIsEditTerbuka(false)}
-              className="w-full sm:w-44 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3.5 rounded-xl transition active:scale-[0.98]"
+              className="w-full sm:w-44 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3.5 rounded-xl transition active:scale-[0.98] disabled:opacity-50"
             >
               Batalkan
             </button>
             <button
               type="submit"
-              className="w-full sm:w-64 bg-black hover:bg-slate-800 text-white text-xs font-bold py-3.5 rounded-xl transition active:scale-[0.98] shadow-md"
+              disabled={isSubmitting}
+              className="w-full sm:w-64 bg-black hover:bg-slate-800 text-white text-xs font-bold py-3.5 rounded-xl transition active:scale-[0.98] shadow-md disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              Simpan Perubahan
+              {isSubmitting ? "Menyimpan Perubahan..." : "Simpan Perubahan"}
             </button>
           </div>
         </div>

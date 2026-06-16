@@ -40,7 +40,7 @@ export default function Sidebar({
   role = "Dosen",
   activeItem = "dashboard",
   onNavChange,
-  onSwitchRole,
+  onLogout,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -116,14 +116,14 @@ export default function Sidebar({
         </ul>
       </nav>
 
-      {/* Footer - Switch Role */}
+      {/* Footer -  logout*/}
       <div className="p-2.5 border-t border-gray-200">
         <button
-          onClick={onSwitchRole}
+          onClick={onLogout}
           className="w-full flex items-center gap-2 px-3.5 py-2 rounded-lg border-none cursor-pointer text-[13px] text-gray-500 bg-transparent hover:bg-gray-100 hover:text-gray-700 transition-all duration-150 font-sans"
         >
           <FiChevronLeft size={15} />
-          <span>Switch Role</span>
+          <span>Logout</span>
         </button>
       </div>
     </aside>

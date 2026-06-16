@@ -8,11 +8,8 @@ import {
   FiSearch,
 } from "react-icons/fi";
 import dashboardData from "../../data/Dosen/Dashboard.json";
-
-// ── Data ──────────────────────────────────────────────────────────
-const JADWAL_HARI_INI = dashboardData.jadwalHariIni;
-const STATUS_NILAI = dashboardData.statusNilai;
-const REKAP_ABSENSI = dashboardData.rekapAbsensi;
+// PERBAIKAN backend: Impor service dosenAPI yang sudah kamu buat di folder services
+import { dosenAPI } from "../../services/dosenAPI"; // <-- Sesuaikan path ke file dosenAPI.js kamu
 
 // ── Sub-components ─────────────────────────────────────────────────
 const ProgressBar = ({ persen }) => {
@@ -80,10 +77,42 @@ const Dashboard = () => {
   // State untuk Filter Status Nilai
   const [filterNilai, setFilterNilai] = useState("semua");
 
+  // ── STATE BACKEND BARU: Menampung data profile dosen asli dari database ──
+  const [profilDosen, setProfilDosen] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   // Effect untuk memperbarui jam setiap detik
   useEffect(() => {
     const timer = setInterval(() => setWaktu(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // ── EFFECT BACKEND BARU: Ambil data user_id dari session login ──
+  useEffect(() => {
+    const muatProfilDosenDinamis = async () => {
+      try {
+        setIsLoading(true);
+        // A. Ambil siakad_session yang disimpan saat login sukses di App.jsx
+        const localSession = localStorage.getItem("siakad_session");
+        if (!localSession) return;
+
+        const dataUserLogin = JSON.parse(localSession);
+        const loggedInUserId = dataUserLogin.id; // Ini mengambil user_id (UUID) milik user yang login
+
+        // B. Panggil fungsi Axios baru dari dosenAPI untuk mengambil 1 baris data dosen
+        const dataDosenReal = await dosenAPI.fetchDosenByUserId(loggedInUserId);
+        
+        if (dataDosenReal) {
+          setProfilDosen(dataDosenReal);
+        }
+      } catch (error) {
+        console.error("Gagal sinkronisasi data dosen ke database:", error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    muatProfilDosenDinamis();
   }, []);
 
   const hari = waktu.toLocaleDateString("id-ID", {
@@ -98,6 +127,11 @@ const Dashboard = () => {
     second: "2-digit",
   });
 
+  // Data Fallback (Tetap di-import dari JSON agar tabel data bawahnya tidak error)
+  const JADWAL_HARI_INI = dashboardData.jadwalHariIni;
+  const STATUS_NILAI = dashboardData.statusNilai;
+  const REKAP_ABSENSI = dashboardData.rekapAbsensi;
+
   // Filter Logika untuk Absensi Mahasiswa
   const filteredAbsensi = REKAP_ABSENSI.filter((item) =>
     item.nama.toLowerCase().includes(searchAbsen.toLowerCase()) ||
@@ -109,6 +143,15 @@ const Dashboard = () => {
     if (filterNilai === "semua") return true;
     return item.status === filterNilai;
   });
+
+  // Tampilan jeda memuat data dari REST API Supabase
+  if (isLoading) {
+    return (
+      <div className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+        Menghubungkan ke database server...
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 flex flex-col gap-5 bg-gray-50/50 min-h-screen">
@@ -123,10 +166,15 @@ const Dashboard = () => {
       >
         <div>
           <h1 className="text-xl font-bold m-0 mb-1.5 tracking-tight">
-            Selamat Datang, {dashboardData.user.nama}
+            {/* PERBAIKAN backend: Sekarang menampilkan nama Rara real dari database */}
+            Selamat Datang, {profilDosen ? profilDosen.nama : "Dosen Akademik"}
           </h1>
           <p className="text-[13px] opacity-80 m-0">
-            {dashboardData.welcome.pesan} · {dashboardData.semester.nama}
+            {/* PERBAIKAN backend: Menampilkan NIDN & Prodi real dari database */}
+            {profilDosen 
+              ? `NIDN: ${profilDosen.nidn} · Program Studi ${profilDosen.program_studi}` 
+              : dashboardData.semester.nama
+            }
           </p>
         </div>
         <div className="text-right flex-shrink-0 bg-white/10 backdrop-blur-sm px-4 py-2.5 rounded-lg border border-white/10">
