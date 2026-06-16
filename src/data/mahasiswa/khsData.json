@@ -1,0 +1,29 @@
+{
+  "ringkasanAkademik": {
+    "ipkTerbaru": 3.74,
+    "sksLulusTotal": 34,
+    "prodi": "D-IV Pengolahan Hasil Perikanan",
+    "nim": "22040101032"
+  },
+  "semesterAktif": "Semester 3",
+  "khsPerSemester": {
+    "ips": 3.65,
+    "sksSemester": 14,
+    "nilai": [
+      { "id": 1, "kode": "PHP101", "mk": "Teknologi Pengalengan Ikan", "sks": 3, "huruf": "A", "bobot": 4.00, "status": "Lulus" },
+      { "id": 2, "kode": "PHP102", "mk": "Biokimia Hasil Perikanan", "sks": 2, "huruf": "B+", "bobot": 3.50, "status": "Lulus" },
+      { "id": 3, "kode": "PHP103", "mk": "Mikrobiologi Dasar", "sks": 3, "huruf": "A-", "bobot": 3.75, "status": "Lulus" },
+      { "id": 4, "kode": "PHP104", "mk": "Manajemen Rantai Dingin", "sks": 3, "huruf": "A", "bobot": 4.00, "status": "Lulus" },
+      { "id": 5, "kode": "PHP105", "mk": "Teknik Refrigerasi", "sks": 3, "huruf": "B", "bobot": 3.00, "status": "Lulus" }
+    ]
+  },
+  "transkripSemua": [
+    { "id": 101, "sem": 1, "kode": "MKW01", "mk": "Bahasa Inggris Maritim", "sks": 2, "huruf": "A", "status": "Lulus" },
+    { "id": 102, "sem": 1, "kode": "PHP001", "mk": "Pengantar Ilmu Kelautan", "sks": 3, "huruf": "A", "status": "Lulus" },
+    { "id": 103, "sem": 1, "kode": "PHP002", "mk": "Dasar Pengolahan Hasil", "sks": 3, "huruf": "B+", "status": "Lulus" },
+    { "id": 201, "sem": 2, "kode": "MKW02", "mk": "Pancasila & Kewarganegaraan", "sks": 2, "huruf": "A", "status": "Lulus" },
+    { "id": 202, "sem": 2, "kode": "PHP003", "mk": "Kimia Pangan Perikanan", "sks": 4, "huruf": "A-", "status": "Lulus" },
+    { "id": 203, "sem": 2, "kode": "PHP004", "mk": "Mikrobiologi Industri", "sks": 3, "huruf": "A", "status": "Lulus" },
+    { "id": 204, "sem": 2, "kode": "PHP005", "mk": "Mekanika Fluida", "sks": 3, "huruf": "B", "status": "Lulus" }
+  ]
+}

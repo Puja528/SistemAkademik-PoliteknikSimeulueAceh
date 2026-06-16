@@ -1,0 +1,80 @@
+{
+  "user": {
+    "inisial": "ICT",
+    "nama": "Dr. Ivan Chatisa, M.Kom",
+    "jabatan": "Senior Lecturer"
+  },
+
+  "semester": {
+    "nama": "Semester Genap 2024/2025"
+  },
+
+  "welcome": {
+    "pesan": "Anda memiliki 3 jadwal mengajar hari ini"
+  },
+
+  "statistik": [
+    {
+      "label": "Mata Kuliah Diampu",
+      "value": 4,
+      "sub": "Semester Genap 2025/2026"
+    },
+    {
+      "label": "Total Mahasiswa",
+      "value": 3,
+      "sub": "Dari 3 kelas aktif"
+    },
+    {
+      "label": "Status Nilai",
+      "value": "1/3",
+      "sub": "Selesai diinput"
+    }
+  ],
+
+  "jadwalHariIni": [
+    {
+      "jam": "08:00 - 09:40",
+      "matkul": "Basis Data",
+      "kelas": "TI-A",
+      "ruang": "Lab 317"
+    },
+    {
+      "jam": "10:00 - 11:40",
+      "matkul": "PBO",
+      "kelas": "TI-B",
+      "ruang": "Lab 256"
+    }
+  ],
+
+  "statusNilai": [
+    {
+      "matkul": "Basis Data",
+      "status": "belum"
+    },
+    {
+      "matkul": "PBO",
+      "status": "sebagian"
+    }
+  ],
+
+  "rekapAbsensi": [
+    {
+      "nim": "2455301110",
+      "nama": "Mila Azizah",
+      "kehadiran": "Pertemuan 10 / 16",
+      "persen": 87
+    },
+    {
+      "nim": "2455301152",
+      "nama": "Puja Erista",
+      "kehadiran": "Pertemuan 9 / 16",
+      "persen": 72
+    },
+    {
+      "nim": "2455301158",
+      "nama": "Rahmadani",
+      "kehadiran": "Pertemuan 10 / 16",
+      "persen": 87
+    }
+  ]
+}

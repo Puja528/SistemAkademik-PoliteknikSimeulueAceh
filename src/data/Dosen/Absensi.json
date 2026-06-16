@@ -1,0 +1,42 @@
+{
+  "filter": {
+    "mataKuliah": "RPL - 2 TI B",
+    "pertemuan": "Pertemuan 14",
+    "jam": "13:00 - 14:00 WIB"
+  },
+
+  "informasiPerkuliahan": {
+    "mataKuliah": "Rekayasa Perangkat Lunak 2",
+    "ruang": "R.301",
+    "pertemuan": "14 / 16",
+    "tanggal": "Senin, 14 Juni 2026"
+  },
+
+  "kelas": {
+    "nama": "2 TI B"
+  },
+
+  "mahasiswa": [
+    {
+      "no": 1,
+      "nim": "2455301110",
+      "nama": "Mila Azizah",
+      "kehadiran": "10/13",
+      "status": "Hadir"
+    },
+    {
+      "no": 2,
+      "nim": "2455301152",
+      "nama": "Puja Erista",
+      "kehadiran": "10/13",
+      "status": "Hadir"
+    },
+    {
+      "no": 3,
+      "nim": "2455301158",
+      "nama": "Rahmadani",
+      "kehadiran": "10/13",
+      "status": "Hadir"
+    }
+  ]
+}

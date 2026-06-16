@@ -1,0 +1,59 @@
+{
+  "mataKuliah": {
+    "nama": "Rekayasa Perangkat Lunak 2",
+    "kode": "RPL - 2 TI B",
+    "semester": "Genap 2025/2026",
+    "sks": 3,
+    "kelas": "2 TI B",
+    "status": "Belum Dikunci"
+  },
+
+  "bobotPenilaian": {
+    "tugas": 30,
+    "uts": 35,
+    "uas": 35
+  },
+
+  "mahasiswa": [
+    {
+      "no": 1,
+      "nim": "2455301110",
+      "nama": "Mila Azizah",
+      "tugas": 85,
+      "uts": 88,
+      "uas": 90,
+      "akhir": 87.8,
+      "huruf": "A",
+      "status": "Terisi"
+    },
+    {
+      "no": 2,
+      "nim": "2455301152",
+      "nama": "Puja Erista",
+      "tugas": 84,
+      "uts": 89,
+      "uas": 90,
+      "akhir": 87.8,
+      "huruf": "A",
+      "status": "Terisi"
+    },
+    {
+      "no": 3,
+      "nim": "2455301158",
+      "nama": "Rahmadani",
+      "tugas": 83,
+      "uts": 88,
+      "uas": 92,
+      "akhir": 87.8,
+      "huruf": "A",
+      "status": "Terisi"
+    }
+  ],
+
+  "statistik": {
+    "totalMahasiswa": 3,
+    "sudahTerisi": 3,
+    "belumDiisi": 24,
+    "rataRataKelas": 82.4
+  }
+}

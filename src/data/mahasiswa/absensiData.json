@@ -1,0 +1,22 @@
+{
+  "ringkasan": {
+    "totalPertemuan": 48,
+    "hadir": 41,
+    "sakit": 2,
+    "izin": 2,
+    "alpa": 3,
+    "persentaseTotal": "85.4%"
+  },
+  "matakuliah": [
+    { "id": 1, "kode": "PHP101", "mk": "Teknologi Pengalengan Ikan", "sks": 3, "hadir": 12, "total": 12, "persentase": 100 },
+    { "id": 2, "kode": "PHP102", "mk": "Biokimia Hasil Perikanan", "sks": 2, "hadir": 11, "total": 12, "persentase": 91.6 },
+    { "id": 3, "kode": "PHP103", "mk": "Mikrobiologi Dasar", "sks": 3, "hadir": 12, "total": 12, "persentase": 100 },
+    { "id": 4, "kode": "PHP104", "mk": "Manajemen Rantai Dingin", "sks": 3, "hadir": 6, "total": 12, "persentase": 50.0 }
+  ],
+  "riwayatHarian": [
+    { "id": 1, "tgl": "15 Juni 2026", "jam": "08:00", "mk": "Teknologi Pengalengan Ikan", "status": "Hadir", "metode": "QR Code Scan" },
+    { "id": 2, "tgl": "11 Juni 2026", "jam": "13:00", "mk": "Manajemen Rantai Dingin", "status": "Alpa", "metode": "Sistem Terkunci" },
+    { "id": 3, "tgl": "09 Juni 2026", "jam": "10:00", "mk": "Biokimia Hasil Perikanan", "status": "Hadir", "metode": "Radius Geolocation" },
+    { "id": 4, "tgl": "04 Juni 2026", "jam": "15:45", "mk": "Manajemen Rantai Dingin", "status": "Alpa", "metode": "Tanpa Keterangan" }
+  ]
+}
