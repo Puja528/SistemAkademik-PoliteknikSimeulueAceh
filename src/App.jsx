@@ -17,12 +17,13 @@ const Login = lazy(() => import("./pages/auth/Login"));
 const DashboardUtama = lazy(() => import("./pages/mahasiswa/DashboardUtama"));
 const KHS = lazy(() => import("./pages/mahasiswa/KHS"));
 const Absensi = lazy(() => import("./pages/mahasiswa/Absensi"));
+const MahasiswaLayout = lazy(() => import("./layouts/mahasiswa/MahasiswaLayout"));
+
 const DosenDashboard = lazy(() => import("./pages/Dosen/Dashboard"));
 const DosenNilai = lazy(() => import("./pages/Dosen/Nilai"));
 const DosenJadwal = lazy(() => import("./pages/Dosen/Jadwal"));
 const DosenAbsensi = lazy(() => import("./pages/Dosen/Absensi"));
 const DosenLayout = lazy(() => import("./layouts/Dosen/DosenLayout"));
-const MahasiswaLayout = lazy(() => import("./layouts/mahasiswa/MahasiswaLayout"));
 
 const PageLoader = () => (
   <div className="flex min-h-screen bg-latar items-center justify-center font-poppins">

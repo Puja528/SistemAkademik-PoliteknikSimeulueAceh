@@ -9,30 +9,10 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 
 const NAV_ITEMS = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: FiGrid,
-    path: "/dosen",
-  },
-  {
-    id: "absensi",
-    label: "Kelola Absensi",
-    icon: FiCheckSquare,
-    path: "/dosen/absensi",
-  },
-  {
-    id: "nilai",
-    label: "Kelola Nilai",
-    icon: FiBookOpen,
-    path: "/dosen/nilai",
-  },
-  {
-    id: "jadwal",
-    label: "Jadwal",
-    icon: FiCalendar,
-    path: "/dosen/jadwal",
-  },
+  { id: "dashboard", label: "Dashboard", icon: FiGrid, path: "/dosen"},
+  { id: "absensi", label: "Kelola Absensi", icon: FiCheckSquare, path: "/dosen/absensi"},
+  { id: "nilai", label: "Kelola Nilai", icon: FiBookOpen, path: "/dosen/nilai" },
+  { id: "jadwal", label: "Jadwal", icon: FiCalendar, path: "/dosen/jadwal"},
 ];
 
 export default function Sidebar({

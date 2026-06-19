@@ -13,17 +13,12 @@ const Login = ({ onLoginSukses }) => {
     setPesanError("");
 
     try {
-      // PROSES: Melakukan login Axios ke database Supabase
       const hasilLogin = await authAPI.login(email.trim(), password);
-
-      // PERBAIKAN DI SINI:
-      // hasilLogin sekarang langsung berupa objek data user (response.data[0])
-      // Jadi tidak perlu menggunakan .profile lagi agar tidak memicu error undefined
       onLoginSukses({
         id: hasilLogin.id,
         email: hasilLogin.email,
         nama: hasilLogin.nama,
-        role: hasilLogin.role // 'staff', 'dosen', atau 'mahasiswa'
+        role: hasilLogin.role 
       });
 
     } catch (error) {
