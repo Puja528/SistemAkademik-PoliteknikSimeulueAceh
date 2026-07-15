@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@font-face {
+    font-family: 'Barlow';
+    src: url('/fonts/Barlow-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Poppins-ExtraBold';
+    src: url('/fonts/Poppins-ExtraBold.ttf') format('truetype');
+}
+
+@theme {
+    /* Fonts */
+    --font-barlow: "Barlow", sans-serif;
+    --font-poppins: "Poppins", sans-serif;
+    --font-poppins-extrabold: "Poppins-ExtraBold", sans-serif;
+
+    /* Tema Warna Utama (Fallback standard) */
+    --color-latar: #F0F4F8;          /* Abu-abu kebiruan sangat muda */
+    --color-teks: #1E293B;           
+    --color-teks-samping: #64748B;   
+    --color-garis: #E2E8F0;          
+    --color-hijau: #0EA5E9;          
+    --color-merah: #FDA4AF;          
+    --color-biru: #38BDF8;           
+    --color-kuning: #BAE6FD;         
+    
+    /* 🌟 KUNCI WARNA SOFT BLUE (Wajib ada agar kelas warna di komponen aktif) */
+    --color-soft-dark: #0369A1;      /* Biru laut tenang untuk teks aktif & judul */
+    --color-soft-light: #E0F2FE;     /* Biru pastel sangat muda untuk background aktif/ikon */
+    --color-soft-button: #0284C7;    /* Biru penunjuk aksi / tombol utama */
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-poppins);
+    background-color: var(--color-latar);
+    color: var(--color-teks);
+}

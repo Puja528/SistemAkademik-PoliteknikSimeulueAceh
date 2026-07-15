@@ -1,0 +1,37 @@
+[
+  {
+    "nidn": "0112038901",
+    "nama": "Zulkifli, S.Pi., M.Si.",
+    "program_studi": "D4 Pengolahan dan Penyimpanan Hasil Perikanan",
+    "email": "zulkifli@polteksimeulue.ac.id",
+    "status": "Aktif"
+  },
+  {
+    "nidn": "0125088502",
+    "nama": "Siti Aminah, S.St.Pi., M.T.",
+    "program_studi": "D3 Budi Daya Ikan",
+    "email": "siti.aminah@polteksimeulue.ac.id",
+    "status": "Aktif"
+  },
+  {
+    "nidn": "0107119103",
+    "nama": "Bambang Hermawan, S.Pi., M.Si.",
+    "program_studi": "D3 Perikanan Tangkap",
+    "email": "bambang.h@polteksimeulue.ac.id",
+    "status": "Aktif"
+  },
+  {
+    "nidn": "0115048804",
+    "nama": "Dr. Irwan Saputra, S.Pi.",
+    "program_studi": "D4 Pengolahan dan Penyimpanan Hasil Perikanan",
+    "email": "irwan.saputra@polteksimeulue.ac.id",
+    "status": "Nonaktif"
+  },
+  {
+    "nidn": "0130098605",
+    "nama": "Rinaawati, S.Pi., M.Si.",
+    "program_studi": "D3 Budi Daya Ikan",
+    "email": "rinawati@polteksimeulue.ac.id",
+    "status": "Aktif"
+  }
+]

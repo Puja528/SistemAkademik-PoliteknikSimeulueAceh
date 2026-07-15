@@ -1,0 +1,50 @@
+[
+  {
+    "id_jadwal": "JDW001",
+    "kode_mk": "PPHP201",
+    "nama_mk": "Teknologi Pembekuan Hasil Perikanan",
+    "dosen": "Zulkifli, S.Pi., M.Si.",
+    "hari": "Senin",
+    "jam": "08:00 - 10:30",
+    "ruangan": "Lab Pengolahan Modern",
+    "kelas": "PPHP-2A",
+    "sks": 3,
+    "semester": 3
+  },
+  {
+    "id_jadwal": "JDW002",
+    "kode_mk": "BDI204",
+    "nama_mk": "Manajemen Pakan dan Nutrisi Ikan",
+    "dosen": "Siti Aminah, S.St.Pi., M.T.",
+    "hari": "Senin",
+    "jam": "11:00 - 13:30",
+    "ruangan": "Lab Hatchery & Pembenihan",
+    "kelas": "BDI-2A",
+    "sks": 3,
+    "semester": 3
+  },
+  {
+    "id_jadwal": "JDW003",
+    "kode_mk": "PTK209",
+    "nama_mk": "Navigasi dan Daerah Penangkapan Ikan",
+    "dosen": "Bambang Hermawan, S.Pi., M.Si.",
+    "hari": "Selasa",
+    "jam": "08:00 - 10:30",
+    "ruangan": "Ruang Teori Bahari 105",
+    "kelas": "PTK-2B",
+    "sks": 2,
+    "semester": 3
+  },
+  {
+    "id_jadwal": "JDW004",
+    "kode_mk": "PPHP402",
+    "nama_mk": "Pengawasan Mutu dan HACCP Perikanan",
+    "dosen": "Zulkifli, S.Pi., M.Si.",
+    "hari": "Rabu",
+    "jam": "14:00 - 16:30",
+    "ruangan": "Lab Uji Mutu & Mikrobiologi",
+    "kelas": "PPHP-4A",
+    "sks": 3,
+    "semester": 5
+  }
+]

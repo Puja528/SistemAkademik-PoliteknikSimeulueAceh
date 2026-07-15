@@ -1,0 +1,42 @@
+{
+  "stats": {
+    "totalStudents": "2.847",
+    "totalLecturers": "142",
+    "totalSchedules": "89",
+    "academicYear": "2026/2027"
+  },
+  "recentActivities": [
+    {
+      "id": 1,
+      "type": "Student",
+      "title": "Pendaftaran Mahasiswa Baru",
+      "user": "Randi Ariska",
+      "detail": "Teknik Perkapalan",
+      "time": "5 menit yang lalu"
+    },
+    {
+      "id": 2,
+      "type": "Schedule",
+      "title": "Jadwal Perkuliahan Diperbarui",
+      "user": "Sistem Informasi Semester Ganjil",
+      "detail": "Ruang Lab Komputer 02",
+      "time": "1 jam yang lalu"
+    },
+    {
+      "id": 3,
+      "type": "Grade",
+      "title": "Publikasi Nilai Utama Disetujui",
+      "user": "Ir. Mahdi, M.T. - Pengantar Maritim",
+      "detail": "Semua Program Studi",
+      "time": "2 jam yang lalu"
+    },
+    {
+      "id": 4,
+      "type": "Lecturer",
+      "title": "Pembaruan Profil Dosen",
+      "user": "Cut Sarah, M.Sc.",
+      "detail": "Budidaya Perairan",
+      "time": "3 jam yang lalu"
+    }
+  ]
+}

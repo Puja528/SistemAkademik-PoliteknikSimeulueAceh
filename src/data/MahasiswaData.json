@@ -1,0 +1,50 @@
+[
+  {
+    "id_mahasiswa": "210401001",
+    "nama": "Rahmad Hidayat",
+    "program_studi": "D4 Pengolahan dan Penyimpanan Hasil Perikanan",
+    "email": "rahmad.hidayat@polteksimeulue.ac.id",
+    "ipk": 3.85,
+    "status": "Aktif"
+  },
+  {
+    "id_mahasiswa": "210302002",
+    "nama": "Cut Mutia",
+    "program_studi": "D3 Perikanan Tangkap",
+    "email": "cut.mutia@polteksimeulue.ac.id",
+    "ipk": 3.92,
+    "status": "Aktif"
+  },
+  {
+    "id_mahasiswa": "210203003",
+    "nama": "Muammar Gaddafi",
+    "program_studi": "D3 Budi Daya Ikan",
+    "email": "muammar.g@polteksimeulue.ac.id",
+    "ipk": 3.67,
+    "status": "Aktif"
+  },
+  {
+    "id_mahasiswa": "210401004",
+    "nama": "Siti Nurhaliza",
+    "program_studi": "D4 Pengolahan dan Penyimpanan Hasil Perikanan",
+    "email": "siti.nurhaliza@polteksimeulue.ac.id",
+    "ipk": 3.78,
+    "status": "Aktif"
+  },
+  {
+    "id_mahasiswa": "210302005",
+    "nama": "Dedi Irwansyah",
+    "program_studi": "D3 Perikanan Tangkap",
+    "email": "dedi.irwansyah@polteksimeulue.ac.id",
+    "ipk": 3.45,
+    "status": "Nonaktif"
+  },
+  {
+    "id_mahasiswa": "210203006",
+    "nama": "Sarah Anggraini",
+    "program_studi": "D3 Budi Daya Ikan",
+    "email": "sarah.anggraini@polteksimeulue.ac.id",
+    "ipk": 3.95,
+    "status": "Aktif"
+  }
+]

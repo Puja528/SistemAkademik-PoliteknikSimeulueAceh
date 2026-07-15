@@ -1,0 +1,42 @@
+[
+  {
+    "id_publikasi": "PUB-2026-001",
+    "kode_mk": "PPHP201",
+    "nama_mk": "Teknologi Pengolahan Modern Hasil Perikanan",
+    "kelas": "PPHP-2A",
+    "dosen": "Siti Aminah, S.St.Pi., M.T.",
+    "jumlah_mahasiswa": 28,
+    "tanggal_input": "24 Mei 2026",
+    "status": "Terbit"
+  },
+  {
+    "id_publikasi": "PUB-2026-002",
+    "kode_mk": "PTK204",
+    "nama_mk": "Daerah Penangkapan Ikan & Oseanografi",
+    "kelas": "PTK-2A",
+    "dosen": "Zulkifli, S.Pi., M.Si.",
+    "jumlah_mahasiswa": 28,
+    "tanggal_input": "25 Mei 2026",
+    "status": "Draft"
+  },
+  {
+    "id_publikasi": "PUB-2026-003",
+    "kode_mk": "BDI209",
+    "nama_mk": "Manajemen Pembenihan & Hatchery",
+    "kelas": "BDI-2B",
+    "dosen": "Bambang Hermawan, S.Pi., M.Si.",
+    "jumlah_mahasiswa": 32,
+    "tanggal_input": "26 Mei 2026",
+    "status": "Draft"
+  },
+  {
+    "id_publikasi": "PUB-2026-004",
+    "kode_mk": "PPHP402",
+    "nama_mk": "Pengujian Mutu & Mikrobiologi Hasil Laut",
+    "kelas": "PPHP-4A",
+    "dosen": "Rinaawati, S.Pi., M.Si.",
+    "jumlah_mahasiswa": 25,
+    "tanggal_input": "22 Mei 2026",
+    "status": "Terbit"
+  }
+]

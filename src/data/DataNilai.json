@@ -1,0 +1,7 @@
+[
+  { "nim": "202601001", "nama": "Ahmad Dani", "tugas": 85, "uts": 80, "uas": 90, "akhir": 85.5, "huruf": "A" },
+  { "nim": "202601002", "nama": "Siti Aminah", "tugas": 78, "uts": 85, "uas": 80, "akhir": 81.1, "huruf": "A-" },
+  { "nim": "202601003", "nama": "Rian Hidayat", "tugas": 90, "uts": 75, "uas": 70, "akhir": 76.5, "huruf": "B+" },
+  { "nim": "202601004", "nama": "Budi Santoso", "tugas": 70, "uts": 70, "uas": 75, "akhir": 72.0, "huruf": "B" },
+  { "nim": "202601005", "nama": "Citra Lestari", "tugas": 65, "uts": 60, "uas": 70, "akhir": 65.5, "huruf": "C" }
+]

@@ -1,0 +1,54 @@
+{
+  "mahasiswa": {
+    "nama": "Rian Altamira",
+    "nim": "22040101032",
+    "prodi": "D-IV Pengolahan Hasil Perikanan",
+    "status": "Aktif",
+    "ipk": 3.74,
+    "sks": 78,
+    "kehadiran": "96.5%"
+  },
+  "jadwal": [
+    {
+      "id": 1,
+      "mk": "Teknologi Pembekuan Hasil Perikanan",
+      "jam": "08:00 - 10:30",
+      "ruang": "Lab Pengolahan 02",
+      "dosen": "Dr. Amin Haris, M.Pd."
+    },
+    {
+      "id": 2,
+      "mk": "Manajemen Mutu Pangan Bahari",
+      "jam": "13:00 - 15:30",
+      "ruang": "Ruang Kuliah Vokasi A3",
+      "dosen": "Siti Rahmah, M.Si."
+    },
+    {
+      "id": 3,
+      "mk": "Mikrobiologi Hasil Perikanan",
+      "jam": "15:45 - 17:15",
+      "ruang": "Lab Mikrobiologi",
+      "dosen": "Ir. Ahmad Fauzi, M.T."
+    }
+  ],
+  "pengumuman": [
+    {
+      "id": 1,
+      "tipe": "Penting",
+      "info": "Pendaftaran PKL Gelombang II TA 2026/2027 telah dibuka hingga 30 Mei 2026.",
+      "tgl": "20 Mei 2026"
+    },
+    {
+      "id": 2,
+      "tipe": "Akademik",
+      "info": "Pengisian KRS Semester Ganjil Susulan bagi mahasiswa yang bermasalah dengan administrasi.",
+      "tgl": "18 Mei 2026"
+    },
+    {
+      "id": 3,
+      "tipe": "Info",
+      "info": "Pelaksanaan Seminar Hasil dan Kolokium gelombang akhir bulan Juni.",
+      "tgl": "15 Mei 2026"
+    }
+  ]
+}

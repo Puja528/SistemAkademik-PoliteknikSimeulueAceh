@@ -1,0 +1,152 @@
+{
+  "ringkasan": {
+    "hariIni": "Senin, 14 Juni 2026",
+    "totalMK": 3,
+    "totalSesi": 3,
+    "statusMinggu": "Minggu Aktif"
+  },
+
+  "mataKuliah": [
+    {
+      "nama": "Rekayasa Perangkat Lunak 2",
+      "kelas": "2 TI B - 28 Mhs",
+      "waktu": "Senin, 13.00 - 14.40",
+      "ruang": "Ruang R.301",
+      "pertemuan": "14/16 Pertemuan"
+    },
+    {
+      "nama": "Basis Data",
+      "kelas": "2 TI A - 30 Mhs",
+      "waktu": "Senin, 08.00 - 09.40",
+      "ruang": "Ruang R.204",
+      "pertemuan": "16/16 Pertemuan"
+    },
+    {
+      "nama": "Pemrograman Web",
+      "kelas": "2 TI C - 26 Mhs",
+      "waktu": "Senin, 11.00 - 13.40",
+      "ruang": "Ruang R.305",
+      "pertemuan": "15/16 Pertemuan"
+    }
+  ],
+
+  "jadwalMingguan": {
+    "periode": "26 Mei - 31 Mei 2025",
+    "mingguKe": 10,
+
+    "hari": [
+      { "nama": "Sen", "tanggal": "26/5" },
+      { "nama": "Sel", "tanggal": "27/5", "aktif": true },
+      { "nama": "Rab", "tanggal": "28/5" },
+      { "nama": "Kam", "tanggal": "29/5" },
+      { "nama": "Jum", "tanggal": "30/5" }
+    ],
+
+    "jam": [
+      "07:00",
+      "08:00",
+      "10:00",
+      "13:00",
+      "15:00"
+    ],
+
+    "jadwal": {
+      "senin": [
+        {
+          "matkul": "Struktur Data",
+          "kelas": "TI-D",
+          "ruang": "R.201",
+          "waktu": "08:00 - 09:40",
+          "warna": "green"
+        }
+      ],
+
+      "selasa": [
+        {
+          "matkul": "Basis Data",
+          "kelas": "TI-A",
+          "ruang": "Lab 317",
+          "waktu": "08:00 - 09:40",
+          "warna": "blue"
+        },
+        {
+          "matkul": "PBO",
+          "kelas": "TI-B",
+          "ruang": "Lab 256",
+          "waktu": "11:00 - 13:40",
+          "warna": "yellow"
+        },
+        {
+          "matkul": "Kecerdasan Buatan",
+          "kelas": "TI-C",
+          "ruang": "R.204",
+          "waktu": "13:00 - 14:40",
+          "warna": "purple"
+        }
+      ],
+
+      "rabu": [
+        {
+          "matkul": "Basis Data",
+          "kelas": "TI-A",
+          "ruang": "Lab 317",
+          "waktu": "08:00 - 09:40",
+          "warna": "blue"
+        },
+        {
+          "matkul": "Kecerdasan Buatan",
+          "kelas": "TI-C",
+          "ruang": "R.204",
+          "waktu": "13:00 - 14:40",
+          "warna": "purple"
+        },
+        {
+          "matkul": "Struktur Data",
+          "kelas": "TI-D",
+          "ruang": "R.201",
+          "waktu": "15:00 - 16:40",
+          "warna": "green"
+        }
+      ],
+
+      "kamis": [
+        {
+          "matkul": "Struktur Data",
+          "kelas": "TI-D",
+          "ruang": "R.201",
+          "waktu": "10:00 - 11:40",
+          "warna": "green"
+        }
+      ],
+
+      "jumat": [
+        {
+          "matkul": "PBO",
+          "kelas": "TI-B",
+          "ruang": "Lab 256",
+          "waktu": "08:00 - 09:40",
+          "warna": "yellow"
+        }
+      ]
+    }
+  },
+
+  "legend": [
+    {
+      "nama": "Basis Data",
+      "warna": "blue"
+    },
+    {
+      "nama": "Struktur Data",
+      "warna": "green"
+    },
+    {
+      "nama": "PBO",
+      "warna": "yellow"
+    },
+    {
+      "nama": "Kecerdasan Buatan",
+      "warna": "purple"
+    }
+  ]
+}
