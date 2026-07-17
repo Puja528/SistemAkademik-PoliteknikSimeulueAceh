@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react"; // Tambahkan useMemo
 import { mahasiswaAPI } from "../../services/mahasiswaAPI";
 import { nilaiAPI } from "../../services/nilaiAPI";
 import Loading from "../../components/admin/Loading";
@@ -21,7 +21,7 @@ const TD = ({ children, className = "" }) => (
 
 export default function DashboardUtama() {
   const [activeTab, setActiveTab] = useState("khs");
-  const [selectedSemester, setSelectedSemester] = useState('Semester 4');
+  const [selectedSemester, setSelectedSemester] = useState('Semester 1');
   const [dataAkademik, setDataAkademik] = useState({ profil: null, nilai: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [waktu, setWaktu] = useState(new Date());
@@ -36,7 +36,10 @@ export default function DashboardUtama() {
       try {
         setIsLoading(true);
         const localSession = localStorage.getItem("siakad_session");
-        if (!localSession) return;
+        if (!localSession) {
+          setIsLoading(false);
+          return;
+        }
 
         const dataUserLogin = JSON.parse(localSession);
         const profil = await mahasiswaAPI.fetchMahasiswaByUserId(
@@ -47,16 +50,16 @@ export default function DashboardUtama() {
           const nilaiData = await nilaiAPI.fetchKHSMahasiswa(
             profil.id_mahasiswa,
           );
-          setDataAkademik({ profil, nilai: nilaiData });
+          setDataAkademik({ profil, nilai: nilaiData || [] });
 
           if (nilaiData && nilaiData.length > 0) {
-            // Ambil semua angka semester dari data nilai, lalu cari yang paling besar (terbaru)
+            // Ambil semua angka semester dari data nilai, lalu cari yang paling besar (terbaru)[cite: 10]
             const listSemester = nilaiData.map(
               (n) => Number(n.jadwal?.semester) || 1,
             );
             const semesterTerbesar = Math.max(...listSemester);
 
-            // Set dropdown otomatis ke semester terbesar tersebut (misal: "Semester 4")
+            // Set dropdown otomatis ke semester terbesar tersebut[cite: 10]
             setSelectedSemester(`Semester ${semesterTerbesar}`);
           }
         }
@@ -69,7 +72,7 @@ export default function DashboardUtama() {
     muatData();
   }, []);
 
-  // --- 🛠️ FUNGSI BARU UNTUK MENGONVERSI GRADE KE BOBOT AKADEMIK ---
+  // --- 🛠️ FUNGSI UNTUK MENGONVERSI GRADE KE BOBOT AKADEMIK ---
   const dapatkanBobotDariGrade = (grade) => {
     if (!grade) return 0;
     const g = grade.toUpperCase().trim();
@@ -81,55 +84,68 @@ export default function DashboardUtama() {
     if (g === "C+") return 2.3;
     if (g === "C") return 2.0;
     if (g === "D") return 1.0;
-    return 0.0; // Grade E / F / T
+    return 0.0; // Grade E / F / T[cite: 10]
   };
 
-  // Memastikan tipe data dikonversi ke Number agar perbandingan filter tidak miss (selalu cocok)
-  const semFilter = Number(selectedSemester.split(" ")[1]) || 1;
+  // Parsing indeks semester pilihan agar aman digunakan[cite: 10]
+  const semFilter = useMemo(() => {
+    return Number(selectedSemester.split(" ")[1]) || 1;
+  }, [selectedSemester]);
 
-  // 1. Kalkulasi IPS (Indeks Prestasi Semester) Secara Akurat (Bobot Nilai * SKS / Total SKS)
-  const hitungIPS = () => {
+  // ✅ MEMOISASI KESELURUHAN KALKULASI AKADEMIK (IPS, IPK, SKS)
+  // Ini mencegah proses kalkulasi ulang yang berat saat jam digital/waktu berdetik[cite: 10]
+  const kalkulasiAkademik = useMemo(() => {
+    // 1. Filter Nilai Semester Terpilih[cite: 10]
     const nilaiSemesterTerpilih = dataAkademik.nilai.filter(
       (n) => Number(n.jadwal?.semester) === semFilter,
     );
 
-    let totalBobotSKS = 0;
-    let totalSKS = 0;
-
+    // 2. Hitung IPS[cite: 10]
+    let totalBobotSksSem = 0;
+    let totalSksSem = 0;
     nilaiSemesterTerpilih.forEach((n) => {
-      const sks = Number(n.jadwal?.sks) || 0;
+      const sks = parseInt(n.jadwal?.sks, 10) || 0;
       const bobot = dapatkanBobotDariGrade(n.grade);
-      totalBobotSKS += bobot * sks;
-      totalSKS += sks;
+      totalBobotSksSem += bobot * sks;
+      totalSksSem += sks;
     });
+    const ips = totalSksSem > 0 ? (totalBobotSksSem / totalSksSem).toFixed(2) : "0.00";
 
-    return totalSKS > 0 ? (totalBobotSKS / totalSKS).toFixed(2) : "0.00";
-  };
-
-  // 2. Kalkulasi IPK (Indeks Prestasi Kumulatif) dari Seluruh Nilai di Database
-  const hitungIPK = () => {
-    let totalBobotSKS = 0;
-    let totalSKS = 0;
-
+    // 3. Hitung IPK Kumulatif & SKS Selesai (Keseluruhan)[cite: 10]
+    let totalBobotSksAll = 0;
+    let totalSksAll = 0;
     dataAkademik.nilai.forEach((n) => {
-      const sks = Number(n.jadwal?.sks) || 0;
+      const sks = parseInt(n.jadwal?.sks, 10) || 0;
       const bobot = dapatkanBobotDariGrade(n.grade);
-      totalBobotSKS += bobot * sks;
-      totalSKS += sks;
+      totalBobotSksAll += bobot * sks;
+      totalSksAll += sks;
     });
+    const ipk = totalSksAll > 0 ? (totalBobotSksAll / totalSksAll).toFixed(2) : "0.00";
 
-    return totalSKS > 0 ? (totalBobotSKS / totalSKS).toFixed(2) : "0.00";
+    // 4. Generate daftar opsi semester dinamis berdasarkan data nilai yang ada[cite: 10]
+    const listSemesterUnik = Array.from(
+      new Set(dataAkademik.nilai.map((n) => Number(n.jadwal?.semester) || 1))
+    ).sort((a, b) => a - b);
+
+    return {
+      ips,
+      ipk,
+      totalSksSelesai: totalSksAll,
+      nilaiSemesterTerpilih,
+      opsiSemester: listSemesterUnik.length > 0 ? listSemesterUnik : [1]
+    };
+  }, [dataAkademik.nilai, semFilter]);
+
+  // Fungsi penentu warna badge grade nilai
+  const getGradeClass = (grade) => {
+    if (!grade) return "bg-rose-50 text-rose-700 border-rose-200";
+    const g = grade.toUpperCase().trim();
+    if (["A", "A-", "B+", "A+"].includes(g))
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (["B", "B-", "C+"].includes(g))
+      return "bg-amber-50 text-amber-700 border-amber-200";
+    return "bg-rose-50 text-rose-700 border-rose-200";
   };
-
-  // Menampung list nilai KHS semester terpilih
-  const khsPerSemester = {
-    ips: hitungIPS(),
-    nilai: dataAkademik.nilai.filter(
-      (n) => Number(n.jadwal?.semester) === semFilter,
-    ),
-  };
-
-  const transkripSemua = dataAkademik.nilai;
 
   const handleUnduhPDF = () => {
     alert(
@@ -158,7 +174,7 @@ export default function DashboardUtama() {
   }
 
   return (
-    <div className="p-6 flex flex-col gap-5 bg-gray-50/50 min-h-screen animate-fadeIn font-sans">
+    <div className="p-6 flex flex-col gap-5 bg-gray-50/50 min-h-screen animate-fadeIn font-sans text-xs text-slate-700">
       {/* 1. SEKSI HEADER PORTAL */}
       <div
         className="rounded-xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
@@ -199,17 +215,17 @@ export default function DashboardUtama() {
         {[
           {
             label: "IPK Kumulatif",
-            value: hitungIPK(),
+            value: kalkulasiAkademik.ipk,
             sub: "Akumulasi Keseluruhan",
           },
           {
             label: "IP Semester (IPS)",
-            value: hitungIPS(),
+            value: kalkulasiAkademik.ips,
             sub: `Nilai ${selectedSemester}`,
           },
           {
             label: "SKS Selesai",
-            value: `${dataAkademik.nilai.reduce((acc, curr) => acc + (curr.jadwal?.sks || 0), 0)} SKS`,
+            value: `${kalkulasiAkademik.totalSksSelesai} SKS`,
             sub: "Total Kredit Lulus",
           },
           {
@@ -273,15 +289,16 @@ export default function DashboardUtama() {
               <h4 className="font-semibold text-xs text-gray-500 uppercase tracking-wide">
                 Rincian Komponen Nilai Berjalan
               </h4>
+              
+              {/* Dropdown Semester Dinamis berdasarkan Riwayat Nilai yang Ada */}
               <select
                 value={selectedSemester}
                 onChange={(e) => setSelectedSemester(e.target.value)}
-                className="bg-white text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-slate-700 cursor-pointer outline-none shadow-sm focus:border-slate-300"
+                className="bg-white text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-slate-700 cursor-pointer outline-none shadow-sm focus:border-slate-300 transition"
               >
-                <option>Semester 1</option>
-                <option>Semester 2</option>
-                <option>Semester 3</option>
-                <option>Semester 4</option>
+                {kalkulasiAkademik.opsiSemester.map((sem) => (
+                  <option key={sem} value={`Semester ${sem}`}>Semester {sem}</option>
+                ))}
               </select>
             </div>
 
@@ -296,28 +313,28 @@ export default function DashboardUtama() {
                   </tr>
                 </thead>
                 <tbody>
-                  {khsPerSemester.nilai.map((n) => (
+                  {kalkulasiAkademik.nilaiSemesterTerpilih.map((n) => (
                     <tr
                       key={n.id}
                       className="hover:bg-gray-50/70 transition-colors"
                     >
                       <TD className="text-[#1a3a6b] font-bold font-mono">
-                        {n.jadwal?.kode_mk}
+                        {n.jadwal?.kode_mk || "MK"}
                       </TD>
                       <TD className="font-semibold text-slate-700 uppercase">
                         {n.jadwal?.mata_kuliah}
                       </TD>
-                      <TD className="text-center font-bold text-slate-600">
-                        {n.jadwal?.sks}
+                      <TD className="text-center font-bold text-slate-600 font-mono">
+                        {n.jadwal?.sks || 0} SKS
                       </TD>
                       <TD className="text-center">
-                        <span className="inline-block px-2.5 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-black tracking-wide uppercase">
-                          {n.grade}
+                        <span className={`inline-block px-2.5 py-0.5 rounded border text-[10px] font-black tracking-wide uppercase ${getGradeClass(n.grade)}`}>
+                          {n.grade || "E"}
                         </span>
                       </TD>
                     </tr>
                   ))}
-                  {khsPerSemester.nilai.length === 0 && (
+                  {kalkulasiAkademik.nilaiSemesterTerpilih.length === 0 && (
                     <tr>
                       <td
                         colSpan="4"
@@ -359,23 +376,25 @@ export default function DashboardUtama() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transkripSemua.map((t) => (
+                  {dataAkademik.nilai.map((t) => (
                     <tr
                       key={t.id}
                       className="hover:bg-gray-50/70 transition-colors"
                     >
                       <TD className="text-center text-gray-400 font-semibold font-mono">
-                        SEMESTER {t.jadwal?.semester}
+                        SEMESTER {t.jadwal?.semester || "?"}
                       </TD>
                       <TD className="font-semibold text-slate-700 uppercase">
                         {t.jadwal?.mata_kuliah}
                       </TD>
-                      <TD className="text-center font-black text-[#1a3a6b] font-mono uppercase">
-                        {t.grade}
+                      <TD className="text-center">
+                        <span className={`inline-block px-2.5 py-0.5 rounded border text-[10px] font-black tracking-wide uppercase ${getGradeClass(t.grade)}`}>
+                          {t.grade || "E"}
+                        </span>
                       </TD>
                     </tr>
                   ))}
-                  {transkripSemua.length === 0 && (
+                  {dataAkademik.nilai.length === 0 && (
                     <tr>
                       <td
                         colSpan="3"

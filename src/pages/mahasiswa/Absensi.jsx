@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // Tambahkan useMemo
 import { absensiAPI } from '../../services/absensiAPI';
 import { mahasiswaAPI } from '../../services/mahasiswaAPI';
 import Loading from '../../components/admin/Loading';
@@ -23,30 +23,36 @@ export default function Absensi() {
     fetchData();
   }, []);
 
-  // 1. TRANSFORMASI DATA UNTUK MATA KULIAH
-  const matakuliahMap = dataAbsen.reduce((acc, curr) => {
-    const id = curr.id_jadwal;
-    if (!acc[id]) {
-      acc[id] = { id, mk: curr.jadwal?.mata_kuliah, kode: curr.jadwal?.kode_mk || curr.jadwal?.kode, sks: curr.jadwal?.sks, hadir: 0, total: 0 };
-    }
-    acc[id].total += 1;
-    if (curr.status_kehadiran === 'Hadir') acc[id].hadir += 1;
-    acc[id].persentase = Math.round((acc[id].hadir / acc[id].total) * 100);
-    return acc;
-  }, {});
+  // AGREGASI DATA (Dioptimalkan dengan useMemo)
+  const { matakuliah, ringkasan } = useMemo(() => {
+    const map = dataAbsen.reduce((acc, curr) => {
+      const id = curr.id_jadwal;
+      if (!acc[id]) {
+        acc[id] = { id, mk: curr.jadwal?.mata_kuliah, kode: curr.jadwal?.kode_mk || curr.jadwal?.kode, sks: curr.jadwal?.sks, hadir: 0, total: 0 };
+      }
+      acc[id].total += 1;
+      if (curr.status_kehadiran === 'Hadir') acc[id].hadir += 1;
+      acc[id].persentase = Math.round((acc[id].hadir / acc[id].total) * 100);
+      return acc;
+    }, {});
 
-  const matakuliah = Object.values(matakuliahMap);
+    const ringkasanData = {
+      totalPertemuan: dataAbsen.length,
+      hadir: dataAbsen.filter(a => a.status_kehadiran === 'Hadir').length,
+      sakit: dataAbsen.filter(a => a.status_kehadiran === 'Sakit').length,
+      izin: dataAbsen.filter(a => a.status_kehadiran === 'Izin').length,
+      alpa: dataAbsen.filter(a => a.status_kehadiran === 'Alpa').length,
+      persentaseTotal: dataAbsen.length > 0 
+        ? Math.round((dataAbsen.filter(a => a.status_kehadiran === 'Hadir').length / dataAbsen.length) * 100) + "%" 
+        : "0%"
+    };
 
-  // 2. TRANSFORMASI DATA UNTUK RINGKASAN
-  const ringkasan = {
-    totalPertemuan: dataAbsen.length,
-    hadir: dataAbsen.filter(a => a.status_kehadiran === 'Hadir').length,
-    sakit: dataAbsen.filter(a => a.status_kehadiran === 'Sakit').length,
-    izin: dataAbsen.filter(a => a.status_kehadiran === 'Izin').length,
-    alpa: dataAbsen.filter(a => a.status_kehadiran === 'Alpa').length,
-    persentaseTotal: dataAbsen.length > 0 
-      ? Math.round((dataAbsen.filter(a => a.status_kehadiran === 'Hadir').length / dataAbsen.length) * 100) + "%" 
-      : "0%"
+    return { matakuliah: Object.values(map), ringkasan: ringkasanData };
+  }, [dataAbsen]);
+
+  // Fungsi pembantu format tanggal
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   if (loading) return <div className="p-6 text-xs font-bold uppercase tracking-wider text-slate-400"><Loading/></div>;

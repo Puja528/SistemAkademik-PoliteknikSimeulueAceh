@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // Tambahkan useMemo
 import { nilaiAPI } from '../../services/nilaiAPI';
 import { mahasiswaAPI } from '../../services/mahasiswaAPI';
 import Loading from '../../components/admin/Loading';
@@ -15,10 +15,14 @@ export default function Transkrip() {
         if (!session) return;
 
         const profil = await mahasiswaAPI.fetchMahasiswaByUserId(session.id);
-        const nilaiData = await nilaiAPI.fetchKHSMahasiswa(profil.id_mahasiswa);
+        const nilaiData = await nilaiAPI.fetchKHSMahasiswa(profil.id_mahasiswa) || []; // Fallback ke array kosong jika null[cite: 9]
         
-        // Urutkan nilai berdasarkan semester terkecil (S-1, S-2, dst) secara kronologis
-        const nilaiTerurut = [...nilaiData].sort((a, b) => (a.jadwal?.semester || 0) - (b.jadwal?.semester || 0));
+        // Urutkan nilai berdasarkan semester terkecil (S-1, S-2, dst) secara kronologis[cite: 9]
+        const nilaiTerurut = [...nilaiData].sort((a, b) => {
+          const semA = Number(a.jadwal?.semester) || 0;
+          const semB = Number(b.jadwal?.semester) || 0;
+          return semA - semB;
+        });
         
         setDataAkademik({ profil, nilai: nilaiTerurut });
       } catch (err) {
@@ -45,30 +49,32 @@ export default function Transkrip() {
     return 0.0; // Untuk grade E / F / T
   };
 
-  // Hitung akumulasi akumulatif total SKS lulus dari database
-  const totalSksLulus = dataAkademik.nilai.reduce((acc, curr) => acc + (Number(curr.jadwal?.sks) || 0), 0);
-
-  // Perhitungan IPK Kumulatif Secara Dinamis dari Seluruh Nilai yang Ada
-  const hitungIPKDinamis = () => {
-    let totalBobotSKS = 0;
+  // ✅ MEMOISASI KAKULASI RINGKASAN AKADEMIK (SKS & IPK)
+  const ringkasanTranskrip = useMemo(() => {
     let totalSKS = 0;
+    let totalBobotSKS = 0;
 
     dataAkademik.nilai.forEach(n => {
-      const sks = Number(n.jadwal?.sks) || 0;
+      const sks = parseInt(n.jadwal?.sks, 10) || 0;
       const bobot = dapatkanBobotDariGrade(n.grade);
       totalBobotSKS += (bobot * sks);
       totalSKS += sks;
     });
 
-    return totalSKS > 0 ? (totalBobotSKS / totalSKS).toFixed(2) : "0.00";
-  };
+    const ipk = totalSKS > 0 ? (totalBobotSKS / totalSKS).toFixed(2) : "0.00";
 
-  const ipkKumulatif = hitungIPKDinamis();
+    return {
+      totalSksLulus: totalSKS,
+      ipkKumulatif: ipk
+    };
+  }, [dataAkademik.nilai]);
 
-  // Penentu warna teks grade huruf mutu
+  // Penentu warna teks grade huruf mutu[cite: 9]
   const getGradeColor = (grade) => {
-    if (['A', 'A-', 'B+'].includes(grade)) return 'text-emerald-600 font-black';
-    if (['B', 'B-', 'C+'].includes(grade)) return 'text-amber-600 font-black';
+    if (!grade) return 'text-rose-600 font-black';
+    const g = grade.toUpperCase().trim();
+    if (['A', 'A-', 'B+', 'A+'].includes(g)) return 'text-emerald-600 font-black';
+    if (['B', 'B-', 'C+'].includes(g)) return 'text-amber-600 font-black';
     return 'text-rose-600 font-black';
   };
 
@@ -93,11 +99,11 @@ export default function Transkrip() {
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">IPK Kumulatif Akhir (Dinamis)</p>
-          <p className="text-xl font-black text-[#1a3a6b] tracking-tight mt-1">{ipkKumulatif}</p>
+          <p className="text-xl font-black text-[#1a3a6b] tracking-tight mt-1">{ringkasanTranskrip.ipkKumulatif}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total SKS Diperoleh</p>
-          <p className="text-xl font-black text-slate-900 tracking-tight mt-1">{totalSksLulus} SKS</p>
+          <p className="text-xl font-black text-slate-900 tracking-tight mt-1">{ringkasanTranskrip.totalSksLulus} SKS</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status Mahasiswa</p>
@@ -114,7 +120,7 @@ export default function Transkrip() {
             <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-24">Semester</th>
+                  <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-28">Semester</th>
                   <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Mata Kuliah</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-32">Kredit SKS</th>
                   <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-28">Huruf Mutu</th>

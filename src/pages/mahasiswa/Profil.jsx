@@ -41,9 +41,13 @@ const ProfilMahasiswa = () => {
     const muatProfil = async () => {
       try {
         setIsLoading(true);
-        const localSession = JSON.parse(localStorage.getItem("siakad_session"));
-        if (!localSession) return;
-        
+        const rawSession = localStorage.getItem("siakad_session");
+        if (!rawSession) {
+          setIsLoading(false); // ✅ Solusi Mengatasi Infinite Loading jika session null
+          return;
+        }
+
+        const localSession = JSON.parse(rawSession);
         setUserSession(localSession);
         
         const urlFilter = `${BASE_URL}?user_id=eq.${localSession.id}`;
@@ -61,7 +65,7 @@ const ProfilMahasiswa = () => {
           });
         }
       } catch (error) {
-        console.error(error);
+        console.error("Gagal memuat profil mahasiswa:", error);
       } finally {
         setIsLoading(false);
       }
@@ -137,22 +141,40 @@ const ProfilMahasiswa = () => {
 
   const handleUbahPassword = async (e) => {
     e.preventDefault();
-    if (!passwordBaru || !konfirmasiPassword) {
+    
+    // ✅ Membuang spasi kosong di awal/akhir input
+    const trimmedPassword = passwordBaru.trim();
+    const trimmedKonfirmasi = konfirmasiPassword.trim();
+
+    // 1. Validasi spasi kosong saja
+    if (!trimmedPassword || !trimmedKonfirmasi) {
       setModalNotif({
         isOpen: true,
         isSuccess: false,
-        title: "Input Kosong",
-        message: "Silakan isi password baru dan konfirmasi password Anda."
+        title: "Input Tidak Valid",
+        message: "Silakan isi password baru dan konfirmasi password Anda tanpa spasi kosong."
       });
       return;
     }
 
-    if (passwordBaru !== konfirmasiPassword) {
+    // 2. Validasi panjang sandi minimal demi keamanan
+    if (trimmedPassword.length < 6) {
+      setModalNotif({
+        isOpen: true,
+        isSuccess: false,
+        title: "Sandi Terlalu Lemah",
+        message: "Demi keamanan akun, password baru minimal harus terdiri dari 6 karakter."
+      });
+      return;
+    }
+
+    // 3. Validasi kesamaan sandi
+    if (trimmedPassword !== trimmedKonfirmasi) {
       setModalNotif({
         isOpen: true,
         isSuccess: false,
         title: "Konfirmasi Gagal",
-        message: "Password baru dan konfirmasi password tidak cocok."
+        message: "Password baru dan konfirmasi password tidak cocok. Silakan periksa kembali."
       });
       return;
     }
@@ -160,7 +182,7 @@ const ProfilMahasiswa = () => {
     try {
       setIsSubmitting(true);
       const urlUpdatePassword = `${USERS_URL}?id=eq.${userSession.id}`;
-      await axios.patch(urlUpdatePassword, { password: passwordBaru }, { headers });
+      await axios.patch(urlUpdatePassword, { password: trimmedPassword }, { headers });
 
       setPasswordBaru("");
       setKonfirmasiPassword("");
@@ -184,7 +206,8 @@ const ProfilMahasiswa = () => {
   };
 
   if (isLoading) return (
-    <div className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+    <div className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+      <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
       Memuat data profil mahasiswa...
     </div>
   );
@@ -253,7 +276,7 @@ const ProfilMahasiswa = () => {
                 <div className="p-2.5 bg-gray-50 border border-gray-100 rounded-lg font-semibold text-slate-700">{profilData.angkatan || "-"}</div>
               </div>
               <div className="sm:col-span-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Korespodensi</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Korespondensi</label>
                 <div className="p-2.5 bg-gray-50 border border-gray-100 rounded-lg font-medium text-slate-600">{profilData.email || "-"}</div>
               </div>
             </div>
@@ -272,8 +295,8 @@ const ProfilMahasiswa = () => {
                   type="password" 
                   value={passwordBaru}
                   onChange={(e) => setPasswordBaru(e.target.value)}
-                  placeholder="Sandi baru..." 
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-slate-400 text-xs font-medium text-slate-700" 
+                  placeholder="Sandi baru (min. 6 karakter)..." 
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-slate-400 focus:bg-white transition text-xs font-medium text-slate-700" 
                 />
               </div>
               <div>
@@ -282,13 +305,13 @@ const ProfilMahasiswa = () => {
                   type="password" 
                   value={konfirmasiPassword}
                   onChange={(e) => setKonfirmasiPassword(e.target.value)}
-                  placeholder="Ulangi sandi..." 
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-slate-400 text-xs font-medium text-slate-700" 
+                  placeholder="Ulangi sandi baru..." 
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-slate-400 focus:bg-white transition text-xs font-medium text-slate-700" 
                 />
               </div>
             </div>
             <div className="flex justify-end">
-              <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 bg-[#1a3a6b] hover:bg-slate-800 text-white font-bold rounded-lg text-xs cursor-pointer">
+              <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 bg-[#1a3a6b] hover:bg-slate-800 disabled:bg-gray-300 text-white font-bold rounded-lg text-xs cursor-pointer transition shadow-sm">
                 <FiSave size={13} />
                 {isSubmitting ? "Memproses..." : "Perbarui Password"}
               </button>
@@ -301,13 +324,13 @@ const ProfilMahasiswa = () => {
       {/* NOTIF MODAL */}
       {modalNotif.isOpen && (
         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full text-center flex flex-col items-center gap-3 border border-gray-100">
+          <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full text-center flex flex-col items-center gap-3 border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg ${modalNotif.isSuccess ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
               {modalNotif.isSuccess ? "✓" : "✕"}
             </div>
-            <h3 className="text-sm font-black text-slate-900 m-0 mt-1">{modalNotif.title}</h3>
+            <h3 className="text-sm font-black text-slate-900 m-0 mt-1 tracking-tight">{modalNotif.title}</h3>
             <p className="text-xs font-medium text-slate-500 m-0 leading-relaxed">{modalNotif.message}</p>
-            <button onClick={() => setModalNotif(p => ({ ...p, isOpen: false }))} className={`w-full py-2 mt-2 font-bold text-white rounded-xl ${modalNotif.isSuccess ? 'bg-green-600' : 'bg-rose-600'}`}>
+            <button onClick={() => setModalNotif(p => ({ ...p, isOpen: false }))} className={`w-full py-2 mt-2 font-bold text-white rounded-xl transition shadow-sm cursor-pointer text-xs ${modalNotif.isSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-rose-600 hover:bg-rose-700'}`}>
               Mengerti
             </button>
           </div>

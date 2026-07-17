@@ -9,16 +9,24 @@ const LIST_JAM = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00",
 export default function Jadwal() {
   const [selectedMataKuliah, setSelectedMataKuliah] = useState(null);
   const [viewMode, setViewMode] = useState("all"); 
-  // ... sisa kode ke bawah tetap sama
 
   // ── STATE DINAMIS DATABASE ──
   const [dataJadwalReal, setDataJadwalReal] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [profilDosen, setProfilDosen] = useState(null);
 
-  const infoHariIni = { namaHari: "Senin", tanggal: "16 Juni 2026" };
+  // Solusi 1: Mengubah info hari ini agar dinamis & sinkron dengan waktu asli laptop
+  const [infoHariIni, setInfoHariIni] = useState({ namaHari: "Senin", tanggal: "" });
 
   useEffect(() => {
+    // Set hari dan tanggal dinamis saat komponen dimuat
+    const hariIndo = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    const tglSekarang = new Date();
+    setInfoHariIni({
+      namaHari: hariIndo[tglSekarang.getDay()],
+      tanggal: tglSekarang.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+    });
+
     const muatJadwalDosen = async () => {
       try {
         setIsLoading(true);
@@ -69,15 +77,21 @@ export default function Jadwal() {
 
   const jadwalSeminggu = formatJadwalMingguan();
 
+  // Solusi 3: Menambahkan method .trim() agar pencarian string lebih kebal error space
   const isCardVisible = (namaMk) => {
     if (!selectedMataKuliah) return true;
-    return namaMk.toLowerCase() === selectedMataKuliah.toLowerCase();
+    return namaMk.trim().toLowerCase() === selectedMataKuliah.trim().toLowerCase();
   };
 
   if (isLoading) {
     return (
-      <div className="text-xs font-bold uppercase text-slate-400 p-6">
-        Sinkronisasi Jadwal Mengajar...
+      <div className="p-6 flex justify-center items-center min-h-screen bg-[#f4f6f9]">
+        <div className="flex flex-col items-center gap-3">
+          <Loading />
+          <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">
+            Sinkronisasi Jadwal Mengajar...
+          </span>
+        </div>
       </div>
     );
   }
@@ -86,13 +100,12 @@ export default function Jadwal() {
   const mataKuliahUnik = [...new Set(dataJadwalReal.map((j) => j.mata_kuliah))];
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full">
+    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full animate-fadeIn">
       {/* 1. SEKSI RINGKASAN HEADER (STYLE GRADIENT BIRU) */}
       <div
         className="text-white rounded-xl p-5 grid grid-cols-1 sm:grid-cols-4 gap-4 items-center shadow-sm"
         style={{
-          background:
-            "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)",
+          background: "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)",
         }}
       >
         <div>
@@ -226,8 +239,8 @@ export default function Jadwal() {
                 ))}
               </div>
               
-              {/* Grid Utama (Relasi Jam & Hari) */}
-              <div className="grid grid-cols-6 gap-3 relative" style={{ height: "480px" }}>
+              {/* Grid Utama (Solusi 2: Tinggi diubah menjadi 540px agar render posisi absolut presisi) */}
+              <div className="grid grid-cols-6 gap-3 relative" style={{ height: "540px" }}>
                 
                 {/* Kolom Indikator Waktu Samping */}
                 <div className="relative h-full text-[10px] font-bold text-slate-400 font-mono pr-2 border-r border-gray-100">
@@ -249,8 +262,8 @@ export default function Jadwal() {
                 {Object.entries(jadwalSeminggu).map(([hari, listKelas]) => (
                   <div 
                     key={hari} 
-                    style={{ position: "relative", height: "100%" }} // Mengunci posisi relative & tinggi 100%
-                    className="bg-gray-50/30 rounded-xl border border-dashed border-gray-200 overflow-hidden" // Ditambahkan overflow-hidden agar tidak bocor keluar
+                    style={{ position: "relative", height: "100%" }} 
+                    className="bg-gray-50/30 rounded-xl border border-dashed border-gray-200 overflow-hidden" 
                   >
                     {/* Background grid lines penunjuk jam */}
                     {LIST_JAM.map((_, i) => {
@@ -264,11 +277,10 @@ export default function Jadwal() {
                       );
                     })}
 
-                    {/* Menampilkan list kelas secara absolut berdasarkan persentase waktu */}
+                    {/* Menampilkan list kelas secara absolut */}
                     {listKelas.map((kelas, idx) => {
                       const visible = isCardVisible(kelas.nama);
                       
-                      // Dapatkan jam mulai dan selesai
                       const [hMulai, mMulai] = kelas.waktu.split(" - ")[0].split(":").map(Number);
                       const [hSelesai, mSelesai] = kelas.waktu.split(" - ")[1].split(":").map(Number);
                       
@@ -287,7 +299,7 @@ export default function Jadwal() {
                           style={{
                             position: "absolute",
                             top: `${topPercent}%`,
-                            height: `calc(${heightPercent}% - 4px)`, // Dikurangi sedikit sela agar tidak terlalu rapat menempel garis bawah
+                            height: `calc(${heightPercent}% - 4px)`, 
                             left: "6px",
                             right: "6px",
                             marginTop: "2px"

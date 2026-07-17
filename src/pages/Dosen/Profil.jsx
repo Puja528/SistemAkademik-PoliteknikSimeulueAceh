@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiUser, FiLock, FiCamera, FiSave } from "react-icons/fi";
+import { FiUser, FiLock, FiCamera, FiSave, FiAlertCircle } from "react-icons/fi";
 import { dosenAPI } from "../../services/dosenAPI";
 
 const Profil = () => {
@@ -28,9 +28,13 @@ const Profil = () => {
     const muatProfil = async () => {
       try {
         setIsLoading(true);
-        const localSession = JSON.parse(localStorage.getItem("siakad_session"));
-        if (!localSession) return;
+        const rawSession = localStorage.getItem("siakad_session");
+        if (!rawSession) {
+          setIsLoading(false);
+          return;
+        }
         
+        const localSession = JSON.parse(rawSession);
         setUserSession(localSession);
         
         // Mengambil data profil berdasarkan id user session
@@ -45,7 +49,7 @@ const Profil = () => {
           });
         }
       } catch (error) {
-        console.error(error);
+        console.error("Gagal memuat profil:", error);
       } finally {
         setIsLoading(false);
       }
@@ -53,7 +57,7 @@ const Profil = () => {
     muatProfil();
   }, []);
 
-  // ✅ PERBAIKAN HANDLER UNTUK UNGGAH FOTO PROFIL VIA AXIOS & NIDN
+  // ✅ HANDLER UNTUK UNGGAH FOTO PROFIL VIA AXIOS & NIDN
   const handleGantiFoto = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -113,25 +117,42 @@ const Profil = () => {
     }
   };
 
-  // ✅ HANDLER UNTUK UBAH PASSWORD
+  // ✅ HANDLER UNTUK UBAH PASSWORD (DENGAN VALIDASI YANG DIPERKETAT)
   const handleUbahPassword = async (e) => {
     e.preventDefault();
-    if (!passwordBaru || !konfirmasiPassword) {
+    
+    const trimmedPassword = passwordBaru.trim();
+    const trimmedKonfirmasi = konfirmasiPassword.trim();
+
+    // 1. Validasi input kosong (mencegah bypass menggunakan spasi)
+    if (!trimmedPassword || !trimmedKonfirmasi) {
       setModalNotif({
         isOpen: true,
         isSuccess: false,
-        title: "Input Kosong",
-        message: "Silakan isi password baru dan konfirmasi password Anda."
+        title: "Input Tidak Valid",
+        message: "Silakan isi password baru dan konfirmasi password Anda tanpa spasi kosong."
       });
       return;
     }
 
-    if (passwordBaru !== konfirmasiPassword) {
+    // 2. Validasi panjang password minimal demi keamanan akun
+    if (trimmedPassword.length < 6) {
+      setModalNotif({
+        isOpen: true,
+        isSuccess: false,
+        title: "Sandi Terlalu Lemah",
+        message: "Demi keamanan akun, password baru minimal harus terdiri dari 6 karakter."
+      });
+      return;
+    }
+
+    // 3. Validasi kecocokan password
+    if (trimmedPassword !== trimmedKonfirmasi) {
       setModalNotif({
         isOpen: true,
         isSuccess: false,
         title: "Konfirmasi Gagal",
-        message: "Password baru dan konfirmasi password tidak cocok."
+        message: "Password baru dan konfirmasi password tidak cocok. Silakan periksa kembali."
       });
       return;
     }
@@ -140,7 +161,7 @@ const Profil = () => {
       setIsSubmitting(true);
       
       // Panggil fungsi patch password manual berdasarkan ID user via Axios
-      await dosenAPI.ubahPasswordUser(userSession.id, passwordBaru);
+      await dosenAPI.ubahPasswordUser(userSession.id, trimmedPassword);
 
       setPasswordBaru("");
       setKonfirmasiPassword("");
@@ -164,7 +185,8 @@ const Profil = () => {
   };
 
   if (isLoading) return (
-    <div className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+    <div className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+      <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
       Memuat data profil...
     </div>
   );
@@ -230,7 +252,7 @@ const Profil = () => {
                 <div className="p-2.5 bg-gray-50 border border-gray-100 rounded-lg font-semibold text-slate-700">{profilData.program_studi || "-"}</div>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Korespodensi</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Korespondensi</label>
                 <div className="p-2.5 bg-gray-50 border border-gray-100 rounded-lg font-medium text-slate-600">{profilData.email || "-"}</div>
               </div>
             </div>
@@ -249,7 +271,7 @@ const Profil = () => {
                   type="password" 
                   value={passwordBaru}
                   onChange={(e) => setPasswordBaru(e.target.value)}
-                  placeholder="Masukkan sandi baru..." 
+                  placeholder="Masukkan sandi baru (min. 6 karakter)..." 
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-slate-400 focus:bg-white transition text-xs font-medium text-slate-700" 
                 />
               </div>

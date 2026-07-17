@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   FiBook,
   FiUsers,
@@ -81,31 +81,47 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    // Flag untuk mencegah setState pada komponen yang sudah unmount
+    // (mis. saat user pindah halaman sebelum fetch selesai)
+    let didCancel = false;
+
     const muatData = async () => {
       try {
         setIsLoading(true);
         const localSession = JSON.parse(localStorage.getItem("siakad_session"));
         if (!localSession) return;
+
         const profil = await dosenAPI.fetchDosenByUserId(localSession.id);
+        if (didCancel) return;
         setProfilDosen(profil);
+
         if (profil) {
           const data = await dosenAPI.fetchDashboardData(profil.nidn);
-          
+          if (didCancel) return;
+
           const dataDisesuaikan = {
             ...data,
             absen: data.absen || data.disabled || []
           };
-          
+
           // Masukkan data yang sudah disesuaikan ke state
           setDataDosen(dataDisesuaikan);
         }
       } catch (error) {
         console.error(error);
       } finally {
-        setIsLoading(false);
+        if (!didCancel) {
+          setIsLoading(false);
+        }
       }
     };
+
     muatData();
+
+    // Cleanup: batalkan proses jika komponen unmount sebelum fetch selesai
+    return () => {
+      didCancel = true;
+    };
   }, []);
 
   const hari = waktu.toLocaleDateString("id-ID", {
@@ -120,19 +136,27 @@ const Dashboard = () => {
     second: "2-digit",
   });
 
+  // Cukup dihitung sekali per hari (tidak bergantung pada `waktu`),
+  // jadi tidak perlu masuk dependency useMemo di bawah
   const hariIniNormalized = new Date()
     .toLocaleDateString("id-ID", { weekday: "long" })
     .toLowerCase();
-  const JADWAL_HARI_INI = (dataDosen.jadwal || [])
-    .filter((j) => j.hari?.toLowerCase() === hariIniNormalized)
-    .map((j) => ({
-      jam: `${j.jam_mulai?.substring(0, 5) || "00:00"} - ${j.jam_selesai?.substring(0, 5) || "00:00"}`,
-      matkul: j.mata_kuliah,
-      kelas: j.kelas,
-      ruang: j.ruangan,
-    }));
 
-  const rekapAbsensiPerMahasiswa = (() => {
+  // useMemo: hanya dihitung ulang saat dataDosen.jadwal berubah,
+  // BUKAN setiap detik akibat re-render dari update jam (waktu)
+  const JADWAL_HARI_INI = useMemo(() => {
+    return (dataDosen.jadwal || [])
+      .filter((j) => j.hari?.toLowerCase() === hariIniNormalized)
+      .map((j) => ({
+        jam: `${j.jam_mulai?.substring(0, 5) || "00:00"} - ${j.jam_selesai?.substring(0, 5) || "00:00"}`,
+        matkul: j.mata_kuliah,
+        kelas: j.kelas,
+        ruang: j.ruangan,
+      }));
+  }, [dataDosen.jadwal, hariIniNormalized]);
+
+  // useMemo: hanya dihitung ulang saat dataDosen.absen berubah
+  const rekapAbsensiPerMahasiswa = useMemo(() => {
     const map = {};
 
     // Tambahkan `|| []` untuk memastikan kodenya selalu melakukan perulangan pada Array
@@ -154,19 +178,25 @@ const Dashboard = () => {
       persen: m.total > 0 ? Math.round((m.hadir / m.total) * 100) : 0,
       kehadiran: `${m.hadir}/${m.total} pertemuan`,
     }));
-  })();
+  }, [dataDosen.absen]);
 
-  const filteredAbsensi = rekapAbsensiPerMahasiswa.filter(
-    (item) =>
-      item.nama.toLowerCase().includes(searchAbsen.toLowerCase()) ||
-      String(item.nim).includes(searchAbsen),
-  );
+  // useMemo: hanya dihitung ulang saat rekap absensi atau kata kunci pencarian berubah
+  const filteredAbsensi = useMemo(() => {
+    return rekapAbsensiPerMahasiswa.filter(
+      (item) =>
+        item.nama.toLowerCase().includes(searchAbsen.toLowerCase()) ||
+        String(item.nim).includes(searchAbsen),
+    );
+  }, [rekapAbsensiPerMahasiswa, searchAbsen]);
 
-  const filteredNilai = (dataDosen.nilai || []).filter(
-    (item) =>
-      filterNilai === "semua" ||
-      (item.status_nilai === "Terbit" ? "selesai" : "belum") === filterNilai,
-  );
+  // useMemo: hanya dihitung ulang saat data nilai atau filter berubah
+  const filteredNilai = useMemo(() => {
+    return (dataDosen.nilai || []).filter(
+      (item) =>
+        filterNilai === "semua" ||
+        (item.status_nilai === "Terbit" ? "selesai" : "belum") === filterNilai,
+    );
+  }, [dataDosen.nilai, filterNilai]);
 
   if (isLoading)
     return (

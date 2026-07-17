@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { nilaiAPI } from "../../services/nilaiAPI";
 import { mahasiswaAPI } from "../../services/mahasiswaAPI";
 import Loading from "../../components/admin/Loading";
@@ -19,7 +19,7 @@ export default function KHS() {
         const nilaiData = await nilaiAPI.fetchKHSMahasiswa(profil.id_mahasiswa);
 
         // 1. Simpan data akademik terlebih dahulu
-        setDataAkademik({ profil, nilai: nilaiData });
+        setDataAkademik({ profil, nilai: nilaiData || [] });
 
         // 2. Cari semester terbaru yang memiliki data nilai
         if (nilaiData && nilaiData.length > 0) {
@@ -28,9 +28,7 @@ export default function KHS() {
           );
           const semesterTerbesar = Math.max(...listSemester);
 
-          // 3. Update state selectedSemester.
-          // Ini akan memicu React untuk melakukan re-render ulang seluruh komponen
-          // dengan nilaiFilter yang sudah mengarah ke semester terbaru.
+          // 3. Update state selectedSemester ke semester terbaru
           setSelectedSemester(`Semester ${semesterTerbesar}`);
         }
       } catch (err) {
@@ -57,56 +55,58 @@ export default function KHS() {
     return 0.0; // Untuk grade E / F / T
   };
 
-  // Konversi pencarian semester ke tipe data Number (agar cocok dengan database)
-  const semIndex = Number(selectedSemester.split(" ")[1]) || 1;
-  const nilaiFilter = dataAkademik.nilai.filter(
-    (n) => Number(n.jadwal?.semester) === semIndex,
-  );
+  // Parsing index semester pilihan (contoh: "Semester 3" -> 3)
+  const semIndex = useMemo(() => {
+    return Number(selectedSemester.split(" ")[1]) || 1;
+  }, [selectedSemester]);
 
-  // Perhitungan Beban SKS Semester ini
-  const totalSksSem = nilaiFilter.reduce(
-    (acc, curr) => acc + (Number(curr.jadwal?.sks) || 0),
-    0,
-  );
+  // Filter nilai semester terpilih (Dioptimalkan dengan useMemo)
+  const nilaiFilter = useMemo(() => {
+    return dataAkademik.nilai.filter(
+      (n) => Number(n.jadwal?.semester) === semIndex,
+    );
+  }, [dataAkademik.nilai, semIndex]);
 
-  // 1. Kalkulasi IPS Dinamis Berdasarkan Bobot Grade Huruf * SKS
-  const hitungIPS = () => {
-    let totalBobotSKS = 0;
-    let totalSKS = 0;
+  // Perhitungan total SKS semester terpilih & Kalkulasi IPS/IPK (Dioptimalkan dengan useMemo)
+  const ringkasanAkademik = useMemo(() => {
+    // A. Hitung SKS Semester ini
+    const totalSksSem = nilaiFilter.reduce(
+      (acc, curr) => acc + (parseInt(curr.jadwal?.sks, 10) || 0),
+      0,
+    );
 
+    // B. Hitung IPS
+    let totalBobotSksSem = 0;
+    let totalSksSemKalkulasi = 0;
     nilaiFilter.forEach((n) => {
-      const sks = Number(n.jadwal?.sks) || 0;
+      const sks = parseInt(n.jadwal?.sks, 10) || 0;
       const bobot = dapatkanBobotDariGrade(n.grade);
-      totalBobotSKS += bobot * sks;
-      totalSKS += sks;
+      totalBobotSksSem += bobot * sks;
+      totalSksSemKalkulasi += sks;
     });
+    const ips = totalSksSemKalkulasi > 0 ? (totalBobotSksSem / totalSksSemKalkulasi).toFixed(2) : "0.00";
 
-    return totalSKS > 0 ? (totalBobotSKS / totalSKS).toFixed(2) : "0.00";
-  };
-
-  // 2. Kalkulasi IPK Dinamis dari Keseluruhan Nilai yang Sudah Masuk (Membatalkan angka 0 dari database)
-  const hitungIPK = () => {
-    let totalBobotSKS = 0;
-    let totalSKS = 0;
-
+    // C. Hitung IPK Kumulatif (Seluruh Semester)
+    let totalBobotSksAll = 0;
+    let totalSksAll = 0;
     dataAkademik.nilai.forEach((n) => {
-      const sks = Number(n.jadwal?.sks) || 0;
+      const sks = parseInt(n.jadwal?.sks, 10) || 0;
       const bobot = dapatkanBobotDariGrade(n.grade);
-      totalBobotSKS += bobot * sks;
-      totalSKS += sks;
+      totalBobotSksAll += bobot * sks;
+      totalSksAll += sks;
     });
+    const ipk = totalSksAll > 0 ? (totalBobotSksAll / totalSksAll).toFixed(2) : "0.00";
 
-    return totalSKS > 0 ? (totalBobotSKS / totalSKS).toFixed(2) : "0.00";
-  };
-
-  const ips = hitungIPS();
-  const ipkKumulatif = hitungIPK();
+    return { totalSksSem, ips, ipk };
+  }, [nilaiFilter, dataAkademik.nilai]);
 
   // Fungsi utilitas penentu warna lencana grade
   const getGradeClass = (grade) => {
-    if (["A", "A-", "B+"].includes(grade))
+    if (!grade) return "bg-rose-50 text-rose-700 border border-rose-200";
+    const g = grade.toUpperCase().trim();
+    if (["A", "A-", "B+", "A+"].includes(g))
       return "bg-emerald-50 text-emerald-700 border border-emerald-200";
-    if (["B", "B-", "C+"].includes(grade))
+    if (["B", "B-", "C+"].includes(g))
       return "bg-amber-50 text-amber-700 border border-amber-200";
     return "bg-rose-50 text-rose-700 border border-rose-200";
   };
@@ -147,7 +147,7 @@ export default function KHS() {
             IPK Kumulatif (Dinamis)
           </p>
           <p className="text-xl font-black text-[#1a3a6b] tracking-tight mt-1">
-            {ipkKumulatif}
+            {ringkasanAkademik.ipk}
           </p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -155,7 +155,7 @@ export default function KHS() {
             IP Semester (IPS)
           </p>
           <p className="text-xl font-black text-[#1a3a6b] tracking-tight mt-1">
-            {ips}
+            {ringkasanAkademik.ips}
           </p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -163,7 +163,7 @@ export default function KHS() {
             Beban SKS Semester Ini
           </p>
           <p className="text-xl font-black text-slate-900 tracking-tight mt-1">
-            {totalSksSem} SKS
+            {ringkasanAkademik.totalSksSem} SKS
           </p>
         </div>
       </section>
@@ -177,7 +177,7 @@ export default function KHS() {
           <select
             value={selectedSemester}
             onChange={(e) => setSelectedSemester(e.target.value)}
-            className="bg-white text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-slate-700 cursor-pointer outline-none shadow-sm focus:border-slate-300"
+            className="bg-white text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-200 text-slate-700 cursor-pointer outline-none shadow-sm focus:border-slate-300 transition"
           >
             <option>Semester 1</option>
             <option>Semester 2</option>
@@ -192,11 +192,14 @@ export default function KHS() {
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]">
+            <table className="w-full text-left border-collapse min-w-[650px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">
                     Mata Kuliah
+                  </th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-20">
+                    SKS
                   </th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-20">
                     Tugas
@@ -225,6 +228,9 @@ export default function KHS() {
                       <td className="px-5 py-3.5 text-xs font-bold text-slate-900 uppercase">
                         {n.jadwal?.mata_kuliah}
                       </td>
+                      <td className="px-4 py-3.5 text-xs text-center font-bold text-slate-600 font-mono">
+                        {n.jadwal?.sks || 0} SKS
+                      </td>
                       <td className="px-4 py-3.5 text-xs text-center font-bold text-slate-500 font-mono">
                         {n.nilai_tugas}
                       </td>
@@ -249,7 +255,7 @@ export default function KHS() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="7"
                       className="px-5 py-10 text-center text-slate-400 font-medium tracking-wide"
                     >
                       Belum ada komponen nilai akademik yang dipublikasikan
