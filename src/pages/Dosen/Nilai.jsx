@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { FiSearch, FiUser, FiEdit2, FiX, FiAlertCircle } from "react-icons/fi";
+import { FiSearch, FiUser, FiAlertCircle, FiEdit2 } from "react-icons/fi";
 import { nilaiAPI } from "../../services/nilaiAPI";
 import { jadwalAPI } from "../../services/jadwalAPI";
 import { dosenAPI } from "../../services/dosenAPI";
-import axios from "axios";
+import axios from "axios"; 
 import Loading from "../../components/admin/Loading";
 
 export default function Nilai() {
@@ -11,16 +11,17 @@ export default function Nilai() {
   const [idJadwalTerpilih, setIdJadwalTerpilih] = useState("");
   const [daftarMahasiswa, setDaftarMahasiswa] = useState([]);
   const [jadwalDetail, setJadwalDetail] = useState(null);
+  const [barisAktif, setBarisAktif] = useState(null); 
+  
+  // PERBAIKAN DI SINI: Spasi pada nama variabel sudah dihapus
+  const [adaPerubahanBaru, setAdaPerubahanBaru] = useState(false);
 
   const [isLocked, setIsLocked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // State modal edit
-  const [modalEdit, setModalEdit] = useState(null); // null | id_mahasiswa
-
   const bobotPenilaian = { tugas: 30, uts: 30, uas: 40 };
 
-// 1. Ambil Data Jadwal Dosen & Set Default ke "Budi Daya Laut" jika ada
+  // 1. Ambil Data Jadwal Dosen
   useEffect(() => {
     const muatAwalJadwalDosen = async () => {
       try {
@@ -36,15 +37,12 @@ export default function Nilai() {
         setDaftarJadwal(jadwalSaya);
 
         if (jadwalSaya.length > 0) {
-          // --- LOGIKA PENCARIAN OTOMATIS "BUDI DAYA LAUT" ---
           const jadwalBudiDaya = jadwalSaya.find(j => 
             j.mata_kuliah.toLowerCase().includes("budi daya laut") || 
             j.mata_kuliah.toLowerCase().includes("budidaya laut")
           );
 
-          // Jika ditemukan "Budi Daya Laut", jadikan default. Jika tidak, pakai jadwal pertama.
           const jadwalDefault = jadwalBudiDaya || jadwalSaya[0];
-
           setIdJadwalTerpilih(jadwalDefault.id_jadwal);
           setJadwalDetail(jadwalDefault);
         }
@@ -55,7 +53,6 @@ export default function Nilai() {
     muatAwalJadwalDosen();
   }, []);
 
-  // Solusi 1: Memicu reload lembar nilai secara aman hanya ketika data detil jadwal telah terbukti diperbarui
   useEffect(() => {
     if (jadwalDetail) {
       muatLembarNilaiMahasiswa();
@@ -95,6 +92,7 @@ export default function Nilai() {
 
       setDaftarMahasiswa(lembarKerja);
       setIsLocked(jadwalDetail?.status_nilai === "Terbit");
+      setAdaPerubahanBaru(false); 
     } catch (error) {
       console.error("Gagal menyusun lembar nilai rombel:", error);
     } finally {
@@ -115,6 +113,8 @@ export default function Nilai() {
     if (numValue < 0) numValue = 0;
     if (numValue > 100) numValue = 100;
 
+    setAdaPerubahanBaru(true);
+
     const updated = daftarMahasiswa.map((mhs) => {
       if (mhs.id_mahasiswa === idMhs) {
         const updatedMhs = { ...mhs, [field]: numValue };
@@ -133,14 +133,14 @@ export default function Nilai() {
     setDaftarMahasiswa(updated);
   };
 
-  const handleSimpan = async () => {
-    if (isLocked) return alert("Nilai terkunci, tidak bisa diubah.");
+  const handleSimpanSemua = async () => {
+    if (isLocked) return alert("Nilai sudah Diterbitkan (Terbit). Tidak bisa diubah lagi.");
     if (daftarMahasiswa.length === 0) return alert("Tidak ada data nilai mahasiswa.");
     
     try {
       setIsLoading(true);
       const payloadArray = daftarMahasiswa.map(mhs => ({
-        id_jadwal: idJadwalTerpilih, // Lepas pembungkus parseInt agar fleksibel (UUID/Integer)
+        id_jadwal: idJadwalTerpilih,
         id_mahasiswa: mhs.id_mahasiswa,
         nilai_tugas: mhs.tugas,
         nilai_uts: mhs.uts,
@@ -151,7 +151,11 @@ export default function Nilai() {
 
       await nilaiAPI.simpanNilaiMahasiswa(payloadArray);
       await nilaiAPI.updateStatusJadwalNilai(idJadwalTerpilih, "Draft");
-      alert("Nilai mahasiswa kelas diampu berhasil dikirim ke Admin!");
+      
+      setJadwalDetail(prev => prev ? { ...prev, status_nilai: "Draft" } : null);
+      setAdaPerubahanBaru(false); 
+      
+      alert("Seluruh nilai rapor berhasil dikirim ke Admin!");
     } catch (error) {
       alert("Gagal menyimpan nilai: " + error.message);
     } finally {
@@ -159,15 +163,10 @@ export default function Nilai() {
     }
   };
 
-  const bukaModalEdit = (idMhs) => setModalEdit(idMhs);
-  const tutupModalEdit = () => setModalEdit(null);
-
-  const mhsModal = modalEdit
-    ? daftarMahasiswa.find(m => m.id_mahasiswa === modalEdit)
-    : null;
+  const isTombolKirimDisabled = (!adaPerubahanBaru && jadwalDetail?.status_nilai === "Draft") || isLocked || isLoading;
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full animate-fadeIn">
+    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full">
 
       {/* 1. KOTAK PENYARINGAN KELAS */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
@@ -178,7 +177,7 @@ export default function Nilai() {
             <select
               value={idJadwalTerpilih}
               onChange={(e) => {
-                const targetId = e.target.value; // Lepaskan parseInt agar lebih fleksibel
+                const targetId = e.target.value;
                 setIdJadwalTerpilih(targetId);
                 setJadwalDetail(daftarJadwal.find(j => String(j.id_jadwal) === String(targetId)));
               }}
@@ -203,16 +202,16 @@ export default function Nilai() {
         </div>
       </div>
 
-      {/* 2. BANNER DETIL MATAKULIAH (STYLE GRADIENT BIRU) */}
+      {/* 2. BANNER DETIL MATAKULIAH */}
       {jadwalDetail && (
-        <div className="text-white rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 shadow-sm animate-fadeIn" style={{ background: "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)" }}>
+        <div className="text-white rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 shadow-sm" style={{ background: "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)" }}>
           <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Mata Kuliah</p><h4 className="font-bold text-xs mt-0.5">{jadwalDetail.mata_kuliah}</h4></div>
           <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Kode & Bobot</p><h4 className="font-bold text-xs mt-0.5">{jadwalDetail.kode_mk} • {jadwalDetail.sks} SKS</h4></div>
           <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Kelas</p><h4 className="font-bold text-xs mt-0.5">Kelas {jadwalDetail.kelas}</h4></div>
           <div>
             <p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Status di Admin</p>
             <h4 className={`font-black text-xs mt-0.5 uppercase tracking-wide ${jadwalDetail.status_nilai === "Terbit" ? "text-green-400" : "text-yellow-300"}`}>
-              {jadwalDetail.status_nilai || "Draft (Bisa Diisi)"}
+              {jadwalDetail.status_nilai === "Draft" ? "DRAFT (SUDAH DIKIRIM)" : jadwalDetail.status_nilai === "Terbit" ? "TERBIT (TERKUNCI)" : "BELUM DIKIRIM"}
             </h4>
           </div>
         </div>
@@ -222,13 +221,24 @@ export default function Nilai() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex-1">
         <div className="flex justify-between items-center gap-4 mb-5">
           <span className="font-bold text-slate-950 text-sm flex items-center gap-2"><FiUser className="text-slate-800" /> Pengisian Transkrip Nilai</span>
+          
           {daftarMahasiswa.length > 0 && (
             <button
-              onClick={handleSimpan}
-              disabled={isLocked || isLoading}
-              className={`flex items-center gap-1.5 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm cursor-pointer transition ${isLocked ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
+              onClick={handleSimpanSemua}
+              disabled={isTombolKirimDisabled}
+              className={`flex items-center gap-1.5 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm cursor-pointer transition ${
+                isTombolKirimDisabled 
+                  ? "bg-gray-400 cursor-not-allowed opacity-75" 
+                  : "bg-[#f97316] hover:bg-[#ea580c]"
+              }`}
             >
-              {isLoading ? "Memproses..." : "Kirim Rapor ke Admin"}
+              {isLocked 
+                ? "Nilai Terkunci (Terbit)" 
+                : (!adaPerubahanBaru && jadwalDetail?.status_nilai === "Draft")
+                  ? "Nilai Sudah Terkirim ke Admin"
+                  : isLoading 
+                    ? "Memproses..." 
+                    : "Kirim Nilai Rapor ke Admin"}
             </button>
           )}
         </div>
@@ -248,39 +258,69 @@ export default function Nilai() {
                   <th className="text-center px-2 py-3 w-24">UAS (40%)</th>
                   <th className="text-center px-4 py-3 w-28">Nilai Akhir</th>
                   <th className="text-center px-4 py-3 w-20">Grade</th>
-                  <th className="text-center px-4 py-3 w-20">Aksi</th>
+                  <th className="text-center px-4 py-3 w-24">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-slate-600">
                 {daftarMahasiswa.map((mhs) => (
-                  <tr key={mhs.id_mahasiswa} className="hover:bg-gray-50/50 transition-colors">
+                  <tr 
+                    key={mhs.id_mahasiswa} 
+                    className={`transition-colors ${barisAktif === mhs.id_mahasiswa ? "bg-amber-50/60" : "hover:bg-gray-50/50"}`}
+                  >
                     <td className="px-4 py-3 text-gray-400 font-medium">{mhs.no}</td>
                     <td className="px-4 py-3 font-mono text-slate-900 font-bold tracking-wide">{mhs.id_mahasiswa}</td>
                     <td className="px-4 py-3 font-bold text-slate-800 uppercase">{mhs.nama}</td>
                     
-                    {/* Solusi 3: Menjadikan tampilan nilai di sel tabel menjadi teks statis yang elegan & andalkan modal untuk editing */}
-                    <td className="px-2 py-3.5 text-center font-bold text-slate-700">{mhs.tugas}</td>
-                    <td className="px-2 py-3.5 text-center font-bold text-slate-700">{mhs.uts}</td>
-                    <td className="px-2 py-3.5 text-center font-bold text-slate-700">{mhs.uas}</td>
+                    <td className="px-2 py-1.5 text-center">
+                      <input
+                        type="number"
+                        min="0" max="100"
+                        value={mhs.tugas}
+                        disabled={isLocked}
+                        onChange={(e) => handleNilaiChange(mhs.id_mahasiswa, "tugas", e.target.value)}
+                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-800 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <input
+                        type="number"
+                        min="0" max="100"
+                        value={mhs.uts}
+                        disabled={isLocked}
+                        onChange={(e) => handleNilaiChange(mhs.id_mahasiswa, "uts", e.target.value)}
+                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-800 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <input
+                        type="number"
+                        min="0" max="100"
+                        value={mhs.uas}
+                        disabled={isLocked}
+                        onChange={(e) => handleNilaiChange(mhs.id_mahasiswa, "uas", e.target.value)}
+                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-800 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
+                      />
+                    </td>
                     
                     <td className="px-4 py-3 text-center font-black text-blue-700 bg-blue-50/30 font-mono tracking-wide">{mhs.akhir}</td>
+                    
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-black border tracking-wide ${mhs.huruf === "A" || mhs.huruf === "B" || mhs.huruf === "C" ? "bg-green-50 text-green-700 border-green-200" : "bg-rose-50 text-rose-700 border-rose-200"}`}>
                         {mhs.huruf}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
+
+                    <td className="px-4 py-1.5 text-center">
                       <button
-                        onClick={() => bukaModalEdit(mhs.id_mahasiswa)}
+                        onClick={() => setBarisAktif(mhs.id_mahasiswa)}
                         disabled={isLocked}
-                        title="Edit nilai mahasiswa ini"
-                        className={`inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-md border text-[10px] font-bold transition
-                          ${isLocked
+                        className={`inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded border text-[10px] font-bold transition ${
+                          isLocked
                             ? "border-gray-200 text-gray-300 bg-gray-50 cursor-not-allowed"
-                            : "border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 cursor-pointer"
-                          }`}
+                            : "border-amber-200 text-amber-600 hover:bg-amber-50 cursor-pointer"
+                        }`}
                       >
-                        <FiEdit2 className="text-[10px]" /> Edit
+                        <FiEdit2 size={10} /> Edit
                       </button>
                     </td>
                   </tr>
@@ -295,92 +335,6 @@ export default function Nilai() {
           </div>
         )}
       </div>
-
-      {/* === MODAL EDIT NILAI === */}
-      {modalEdit && mhsModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fadeIn"
-          onClick={(e) => { if (e.target === e.currentTarget) tutupModalEdit(); }}
-        >
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-sm mx-4">
-
-            {/* Header modal */}
-            <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Edit Nilai Mahasiswa</p>
-                <p className="font-black text-slate-800 text-sm uppercase leading-tight">{mhsModal.nama}</p>
-                <p className="text-[11px] font-mono text-slate-400 mt-0.5">{mhsModal.id_mahasiswa}</p>
-              </div>
-              <button
-                onClick={tutupModalEdit}
-                className="text-slate-400 hover:text-slate-700 hover:bg-gray-100 rounded-lg p-1.5 transition cursor-pointer"
-                title="Tutup"
-              >
-                <FiX className="text-base" />
-              </button>
-            </div>
-
-            {/* Input nilai */}
-            <div className="px-5 pt-4 pb-3">
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {[
-                  { field: "tugas", label: "Tugas", bobot: "30%" },
-                  { field: "uts",   label: "UTS",   bobot: "30%" },
-                  { field: "uas",   label: "UAS",   bobot: "40%" },
-                ].map(({ field, label, bobot }) => (
-                  <div key={field}>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                      {label} <span className="text-slate-300 font-normal">({bobot})</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={mhsModal[field]}
-                      onChange={(e) => handleNilaiChange(mhsModal.id_mahasiswa, field, e.target.value)}
-                      className="w-full text-center border border-gray-200 rounded-lg py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Preview nilai akhir & grade */}
-              <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Nilai Akhir</p>
-                  <p className="text-xl font-black text-blue-700 font-mono leading-none mt-0.5">{mhsModal.akhir}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-1">Grade</p>
-                  <span className={`inline-block px-3 py-1 rounded-md text-sm font-black border tracking-wide ${
-                    ["A", "B", "C"].includes(mhsModal.huruf)
-                      ? "bg-green-50 text-green-700 border-green-200"
-                      : "bg-rose-50 text-rose-700 border-rose-200"
-                  }`}>
-                    {mhsModal.huruf}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer modal */}
-            <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-100">
-              <button
-                onClick={tutupModalEdit}
-                className="px-4 py-1.5 text-xs font-bold border border-gray-200 rounded-lg text-slate-600 hover:bg-gray-50 transition cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                onClick={tutupModalEdit}
-                className="px-4 py-1.5 text-xs font-bold bg-[#1a3a6b] text-white rounded-lg hover:bg-[#244b86] transition cursor-pointer shadow-sm"
-              >
-                Simpan Perubahan
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

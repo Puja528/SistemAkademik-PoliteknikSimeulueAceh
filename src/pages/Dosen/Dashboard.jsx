@@ -7,9 +7,15 @@ import {
   FiCalendar,
   FiSearch,
 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom"; // 1. IMPORT USENAVIGATE
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { dosenAPI } from "../../services/dosenAPI";
+import { jadwalAPI } from "../../services/jadwalAPI"; // 1. TAMBAHKAN IMPORT JADWAL API AGAR SINKRON
 import Loading from "../../components/admin/Loading.jsx";
+
+// Sama seperti pada Absensi.jsx: konfigurasi koneksi Supabase untuk query roster mahasiswa resmi
+const SUPABASE_URL = "https://mwkewvjpgcvlwgycdpvo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_-mjKGRjVH18ef1G8ZCjTHg_dcP5lVxK";
 
 const ProgressBar = ({ persen }) => {
   const colorClass =
@@ -63,7 +69,7 @@ const TD = ({ children, className = "" }) => (
 );
 
 const Dashboard = () => {
-  const navigate = useNavigate(); // 2. INISIALISASI ROUTER NAVIGATE
+  const navigate = useNavigate();
   const [waktu, setWaktu] = useState(new Date());
   const [searchAbsen, setSearchAbsen] = useState("");
   const [filterNilai, setFilterNilai] = useState("semua");
@@ -73,6 +79,7 @@ const Dashboard = () => {
     nilai: [],
     absen: [],
   });
+  const [totalMahasiswaAktif, setTotalMahasiswaAktif] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -81,8 +88,6 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    // Flag untuk mencegah setState pada komponen yang sudah unmount
-    // (mis. saat user pindah halaman sebelum fetch selesai)
     let didCancel = false;
 
     const muatData = async () => {
@@ -91,24 +96,81 @@ const Dashboard = () => {
         const localSession = JSON.parse(localStorage.getItem("siakad_session"));
         if (!localSession) return;
 
+        // 1. Ambil data profil dosen berdasarkan user ID session
         const profil = await dosenAPI.fetchDosenByUserId(localSession.id);
         if (didCancel) return;
         setProfilDosen(profil);
 
         if (profil) {
-          const data = await dosenAPI.fetchDashboardData(profil.nidn);
+          // 2. Ambil data dashboard dasar (nilai & absen)
+          const dataDashboard = await dosenAPI.fetchDashboardData(profil.nidn);
           if (didCancel) return;
 
+          // 3. PERBAIKAN UTAMA: Ambil data master jadwal resmi dan saring lewat NIDN agar pasti sinkron
+          const semuaJadwal = await jadwalAPI.fetchJadwal();
+          const jadwalSaya = semuaJadwal.filter(
+            (j) => j.nidn_dosen === profil.nidn,
+          );
+          if (didCancel) return;
+
+          // 4. Susun ulang data secara komprehensif ke state
           const dataDisesuaikan = {
-            ...data,
-            absen: data.absen || data.disabled || []
+            nilai: dataDashboard.nilai || [],
+            absen: dataDashboard.absen || dataDashboard.disabled || [],
+            jadwal: jadwalSaya, // Memastikan array jadwal terisi dari master data jadwal
           };
 
-          // Masukkan data yang sudah disesuaikan ke state
           setDataDosen(dataDisesuaikan);
+
+          // 5. PERBAIKAN TOTAL MAHASISWA: hitung dari roster resmi per kelas (id_kelas),
+          // bukan dari dedup log absensi historis. Log absensi bisa berisi sisa data
+          // mahasiswa yang sudah pindah/keluar kelas, sehingga totalnya bisa lebih
+          // besar dari jumlah mahasiswa yang sebenarnya terdaftar aktif.
+          const idKelasUnik = [
+            ...new Set(
+              jadwalSaya
+                .map((j) => j.id_kelas)
+                .filter((id) => id !== undefined && id !== null),
+            ),
+          ];
+
+          if (idKelasUnik.length > 0) {
+            try {
+              const resMhs = await axios.get(
+                `${SUPABASE_URL}/rest/v1/mahasiswa`,
+                {
+                  params: { id_kelas: `in.(${idKelasUnik.join(",")})` },
+                  headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`,
+                  },
+                },
+              );
+              if (didCancel) return;
+
+              const rosterMhs = resMhs.data || [];
+              const idMhsUnik = [
+                ...new Set(
+                  rosterMhs
+                    .map((m) => (m.id_mahasiswa ? String(m.id_mahasiswa) : null))
+                    .filter(Boolean),
+                ),
+              ];
+              setTotalMahasiswaAktif(idMhsUnik.length);
+            } catch (errMhs) {
+              console.error("Gagal memuat roster mahasiswa aktif:", errMhs);
+              // Fallback: tetap pakai dedup dari log absensi kalau query roster gagal
+              const fallbackId = (dataDisesuaikan.absen || [])
+                .map((a) => (a.id_mahasiswa ? String(a.id_mahasiswa) : null))
+                .filter(Boolean);
+              setTotalMahasiswaAktif([...new Set(fallbackId)].length);
+            }
+          } else {
+            setTotalMahasiswaAktif(0);
+          }
         }
       } catch (error) {
-        console.error(error);
+        console.error("Gagal memuat data dashboard:", error);
       } finally {
         if (!didCancel) {
           setIsLoading(false);
@@ -118,7 +180,6 @@ const Dashboard = () => {
 
     muatData();
 
-    // Cleanup: batalkan proses jika komponen unmount sebelum fetch selesai
     return () => {
       didCancel = true;
     };
@@ -136,14 +197,10 @@ const Dashboard = () => {
     second: "2-digit",
   });
 
-  // Cukup dihitung sekali per hari (tidak bergantung pada `waktu`),
-  // jadi tidak perlu masuk dependency useMemo di bawah
   const hariIniNormalized = new Date()
     .toLocaleDateString("id-ID", { weekday: "long" })
     .toLowerCase();
 
-  // useMemo: hanya dihitung ulang saat dataDosen.jadwal berubah,
-  // BUKAN setiap detik akibat re-render dari update jam (waktu)
   const JADWAL_HARI_INI = useMemo(() => {
     return (dataDosen.jadwal || [])
       .filter((j) => j.hari?.toLowerCase() === hariIniNormalized)
@@ -155,11 +212,9 @@ const Dashboard = () => {
       }));
   }, [dataDosen.jadwal, hariIniNormalized]);
 
-  // useMemo: hanya dihitung ulang saat dataDosen.absen berubah
   const rekapAbsensiPerMahasiswa = useMemo(() => {
     const map = {};
 
-    // Tambahkan `|| []` untuk memastikan kodenya selalu melakukan perulangan pada Array
     for (const a of dataDosen.absen || []) {
       const id = a.id_mahasiswa;
       if (!map[id]) {
@@ -180,7 +235,6 @@ const Dashboard = () => {
     }));
   }, [dataDosen.absen]);
 
-  // useMemo: hanya dihitung ulang saat rekap absensi atau kata kunci pencarian berubah
   const filteredAbsensi = useMemo(() => {
     return rekapAbsensiPerMahasiswa.filter(
       (item) =>
@@ -189,7 +243,6 @@ const Dashboard = () => {
     );
   }, [rekapAbsensiPerMahasiswa, searchAbsen]);
 
-  // useMemo: hanya dihitung ulang saat data nilai atau filter berubah
   const filteredNilai = useMemo(() => {
     return (dataDosen.nilai || []).filter(
       (item) =>
@@ -215,7 +268,6 @@ const Dashboard = () => {
             "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)",
         }}
       >
-        {/* 3. MENAMBAHKAN CLICK HANDLER DAN CLASS CURSOR PADA BLOK PROFIL */}
         <div
           onClick={() => navigate("/dosen/profil")}
           className="cursor-pointer hover:opacity-90 transition-opacity"
@@ -245,7 +297,6 @@ const Dashboard = () => {
           {
             icon: FiBook,
             label: "Mata Kuliah Diampu",
-            // AMAN: Ditambahkan ?. sebelum length
             value: dataDosen.jadwal?.length || 0,
             sub: "Semester Berjalan",
             bgIcon: "bg-blue-50 text-[#1a3a6b]",
@@ -253,17 +304,16 @@ const Dashboard = () => {
           {
             icon: FiUsers,
             label: "Total Mahasiswa",
-            // AMAN: Ditambahkan || [] sebelum di-map agar tidak terbaca undefined
-            value: [
-              ...new Set((dataDosen.absen || []).map((a) => a.id_mahasiswa)),
-            ].length,
-            sub: "Data Terintegrasi",
+            // Dihitung dari roster resmi per id_kelas (lihat useEffect di atas),
+            // sehingga selalu sinkron dengan jumlah yang didaftarkan admin —
+            // tidak lagi terpengaruh sisa data di log absensi historis.
+            value: totalMahasiswaAktif,
+            sub: "Kelas Yang Diampu",
             bgIcon: "bg-emerald-50 text-emerald-600",
           },
           {
             icon: FiBookOpen,
             label: "Status Nilai",
-            // AMAN: Ditambahkan ?. sebelum filter dan sebelum length
             value: `${(dataDosen.nilai || []).filter((n) => n.status_nilai === "Terbit").length}/${dataDosen.nilai?.length || 0}`,
             sub: "Selesai diinput",
             bgIcon: "bg-purple-50 text-purple-600",
@@ -403,78 +453,6 @@ const Dashboard = () => {
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
-
-      {/* KOTAK BESAR REKAP ABSENSI MAHASISWA */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <span className="text-sm font-bold text-slate-950">
-            Rekapitulasi Kehadiran Mahasiswa
-          </span>
-          <div className="relative w-full sm:w-60">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <FiSearch className="text-gray-400" size={13} />
-            </span>
-            <input
-              type="text"
-              placeholder="Cari NIM atau nama..."
-              value={searchAbsen}
-              onChange={(e) => setSearchAbsen(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-slate-400 focus:bg-white transition"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border border-gray-100">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-50">
-                {[
-                  "NIM / ID",
-                  "Nama Mahasiswa",
-                  "Kehadiran",
-                  "Persentase Grafis",
-                ].map((h) => (
-                  <TH key={h}>{h}</TH>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredAbsensi.length > 0 ? (
-                filteredAbsensi.map((r, i) => (
-                  <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                    <TD className="font-mono font-bold text-slate-900 tracking-wide">
-                      {r.nim}
-                    </TD>
-                    <TD className="font-bold text-slate-800 uppercase">
-                      {r.nama}
-                    </TD>
-                    <TD className="font-semibold text-slate-700">
-                      {r.kehadiran}
-                    </TD>
-                    <TD>
-                      <div className="flex items-center gap-3 w-full max-w-xs">
-                        <ProgressBar persen={r.persen} />
-                        <span className="font-bold text-slate-900 w-8 text-right">
-                          {r.persen}%
-                        </span>
-                      </div>
-                    </TD>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="text-center py-10 text-gray-400 font-medium"
-                  >
-                    Mahasiswa tidak ditemukan.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

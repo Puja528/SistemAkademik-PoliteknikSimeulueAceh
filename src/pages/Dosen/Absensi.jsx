@@ -15,7 +15,7 @@ export default function Absensi() {
   const [filterPertemuan, setFilterPertemuan] = useState("Pertemuan 1");
   const [isLoading, setIsLoading] = useState(false);
 
-  // 1. Ambil Data Awal (Sekali Saja saat Mount)
+  // 1. Ambil Data Awal Jadwal Dosen
   useEffect(() => {
     const muatJadwalAbsen = async () => {
       try {
@@ -31,7 +31,6 @@ export default function Absensi() {
         setDaftarJadwal(jadwalSaya);
         
         if (jadwalSaya.length > 0) {
-          // Amankan tipe data id_jadwal agar fleksibel baik string maupun number
           setIdJadwalTerpilih(jadwalSaya[0].id_jadwal);
           setJadwalDetail(jadwalSaya[0]);
         }
@@ -42,7 +41,59 @@ export default function Absensi() {
     muatJadwalAbsen();
   }, []);
 
-  // 2. Fungsi Mengambil Daftar Mahasiswa & Status Absensi
+// 2. PERBAIKAN SAKTI: Auto-detect Pertemuan Menggunakan Query Langsung Via Axios
+  useEffect(() => {
+    const deteksiPertemuanSelanjutnya = async () => {
+      if (!idJadwalTerpilih) return;
+      
+      try {
+        // Bypass fungsi API bawaan yang mungkin menolak parameter "semua"
+        // Kita tembak langsung ke tabel absensi menggunakan axios seperti fungsi muatDaftarHadirMahasiswa Anda
+        const resAbsen = await axios.get(`https://mwkewvjpgcvlwgycdpvo.supabase.co/rest/v1/absensi`, {
+          params: { id_jadwal: `eq.${idJadwalTerpilih}` },
+          headers: {
+            apikey: "sb_publishable_-mjKGRjVH18ef1G8ZCjTHg_dcP5lVxK",
+            Authorization: "Bearer sb_publishable_-mjKGRjVH18ef1G8ZCjTHg_dcP5lVxK"
+          }
+        });
+
+        const seluruhAbsenKelas = resAbsen.data || [];
+        
+        if (seluruhAbsenKelas.length > 0) {
+          // Cari list pertemuan unik yang sudah pernah di-input (misal: ["Pertemuan 1", "Pertemuan 2"])
+          const pertemuanDiisi = [...new Set(seluruhAbsenKelas.map(a => a.pertemuan))];
+          
+          // Ekstrak angka dari string pertemuan untuk mencari yang paling tinggi
+          const angkaPertemuan = pertemuanDiisi.map(p => {
+            if (!p) return 0;
+            const match = p.match(/\d+/);
+            return match ? parseInt(match[0], 10) : 0;
+          });
+          
+          const pertemuanTertinggi = Math.max(...angkaPertemuan, 0);
+          
+          // Tentukan pertemuan berikutnya (maksimal 16)
+          const nextPertemuan = pertemuanTertinggi < 16 ? pertemuanTertinggi + 1 : 16;
+          
+          // Set otomatis dropdown ke pertemuan berikutnya
+          setFilterPertemuan(`Pertemuan ${nextPertemuan}`);
+        } else {
+          // Jika kelas ini benar-benar belum punya record absen sama sekali
+          setFilterPertemuan("Pertemuan 1");
+        }
+      } catch (error) {
+        console.error("Gagal mendeteksi riwayat pertemuan kelas:", error);
+        setFilterPertemuan("Pertemuan 1"); // Fallback aman jika request gagal
+      }
+      
+      // Reset daftar mahasiswa di tabel agar dosen wajib klik "Tampilkan"
+      setDaftarMahasiswa([]);
+    };
+
+    deteksiPertemuanSelanjutnya();
+  }, [idJadwalTerpilih]);
+
+  // 3. Fungsi Mengambil Daftar Mahasiswa & Status Absensi
   const muatDaftarHadirMahasiswa = async () => {
     if (!idJadwalTerpilih || !jadwalDetail) return;
     setIsLoading(true);
@@ -80,11 +131,6 @@ export default function Absensi() {
     }
   };
 
-  // Otomatis bersihkan/reset daftar mahasiswa jika user mengganti pilihan jadwal/pertemuan sebelum mengeklik Tampilkan kembali
-  useEffect(() => {
-    setDaftarMahasiswa([]);
-  }, [idJadwalTerpilih, filterPertemuan]);
-
   const handleStatusChange = (idMhs, statusBaru) => {
     const updated = daftarMahasiswa.map((mhs) => {
       if (mhs.id_mahasiswa === idMhs) {
@@ -112,7 +158,7 @@ export default function Absensi() {
     }
     try {
       const payloadAbsen = daftarMahasiswa.map(m => ({
-        id_jadwal: idJadwalTerpilih, // Hindari paksaan parseInt jika skema database Anda UUID/String
+        id_jadwal: idJadwalTerpilih, 
         id_mahasiswa: m.id_mahasiswa,
         pertemuan: filterPertemuan,
         status_kehadiran: m.status,
@@ -120,7 +166,14 @@ export default function Absensi() {
       }));
 
       await absensiAPI.simpanAbsensiKelas(payloadAbsen);
-      alert("Data lembar absensi berkas mahasiswa berhasil diunggah!");
+      alert(`Data lembar absensi ${filterPertemuan} berhasil diunggah!`);
+      
+      // Sesaat setelah sukses menyimpan, picu pembaruan deteksi pertemuan berikutnya
+      // dengan merefresh ulang state idJadwalTerpilih secara paksa
+      const currentJadwal = idJadwalTerpilih;
+      setIdJadwalTerpilih("");
+      setTimeout(() => setIdJadwalTerpilih(currentJadwal), 10);
+
     } catch (error) {
       alert("Gagal mengunggah absensi: " + error.message);
     }
@@ -148,9 +201,8 @@ export default function Absensi() {
             <select 
               value={idJadwalTerpilih}
               onChange={(e) => {
-                const targetId = e.target.value; // Dinamis tanpa paksaan parseInt
+                const targetId = e.target.value;
                 setIdJadwalTerpilih(targetId);
-                // Pastikan pembandingan tipe data menggunakan double equals (==) atau normalisasi string
                 setJadwalDetail(daftarJadwal.find(j => String(j.id_jadwal) === String(targetId)));
               }}
               className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer focus:outline-none focus:border-slate-400 transition"
@@ -189,7 +241,7 @@ export default function Absensi() {
         <div className="text-white rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 shadow-sm animate-fadeIn" style={{ background: "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)" }}>
           <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Mata Kuliah</p><h4 className="font-bold text-xs mt-0.5">{jadwalDetail.mata_kuliah}</h4></div>
           <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Ruangan</p><h4 className="font-bold text-xs mt-0.5">{jadwalDetail.ruangan}</h4></div>
-          <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Pertemuan</p><h4 className="font-bold text-xs mt-0.5">{filterPertemuan}</h4></div>
+          <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Pertemuan Aktif</p><h4 className="font-bold text-xs mt-0.5 bg-yellow-400 text-slate-900 px-1.5 py-0.5 rounded font-black inline-block">{filterPertemuan}</h4></div>
           <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Tanggal Sesi</p><h4 className="font-bold text-xs mt-0.5">{new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</h4></div>
         </div>
       )}
