@@ -3,6 +3,7 @@ import React, { lazy, Suspense, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
 
+//admin
 const MainLayouts = lazy(() => import("./layouts/admin/MainLayouts"));
 const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
 const Loading = lazy(() => import("./components/admin/Loading"));
@@ -12,12 +13,15 @@ const MasterDosen = lazy(() => import("./pages/admin/dosen/MasterDosen"));
 const TambahDosen = lazy(() => import("./pages/admin/dosen/TambahDosen"));
 const OperasiAkademik = lazy(() => import("./pages/admin/jadwal/MasterJadwal"));
 const PublikasiNilai = lazy(() => import("./pages/admin/nilai/PublikasiNilai"));
+const AdminProfil = lazy(() => import ("./pages/admin/Profil"));
 
+//mahasiswa
 const Login = lazy(() => import("./pages/auth/Login"));
 const DashboardUtama = lazy(() => import("./pages/mahasiswa/DashboardUtama"));
 const KHS = lazy(() => import("./pages/mahasiswa/KHS"));
 const Profil = lazy(() => import("./pages/mahasiswa/Profil"));
 
+//dosen
 const Absensi = lazy(() => import("./pages/mahasiswa/Absensi"));
 const MahasiswaLayout = lazy(() => import("./layouts/mahasiswa/MahasiswaLayout"));
 const Transkrip = lazy(() => import("./pages/mahasiswa/Transkrip"));
@@ -86,6 +90,7 @@ function App() {
             <Route path="dosen/TambahDosen" element={<TambahDosen />} />
             <Route path="jadwal" element={<OperasiAkademik />} />
             <Route path="nilai" element={<PublikasiNilai />} />
+            <Route path="profil" element={<AdminProfil />} />
           </Route>
 
           <Route
