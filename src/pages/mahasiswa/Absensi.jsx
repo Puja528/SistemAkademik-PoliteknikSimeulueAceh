@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'; // Tambahkan useMemo
+import React, { useState, useEffect } from 'react';
 import { absensiAPI } from '../../services/absensiAPI';
 import { mahasiswaAPI } from '../../services/mahasiswaAPI';
 import Loading from '../../components/admin/Loading';
@@ -13,7 +13,24 @@ export default function Absensi() {
         const session = JSON.parse(localStorage.getItem("siakad_session"));
         const mhs = await mahasiswaAPI.fetchMahasiswaByUserId(session.id);
         const data = await absensiAPI.fetchAbsensiMahasiswa(mhs.id_mahasiswa);
-        setDataAbsen(data);
+        
+        // === PERBAIKAN UTAMA: Filter data ganda pada tanggal yang sama per mata kuliah ===
+        const terfilter = [];
+        const checkedKeys = new Set();
+
+        if (data && Array.isArray(data)) {
+          // Urutkan dari yang paling baru agar status kehadiran terakhir yang dipakai jika ada duplikat
+          [...data].reverse().forEach((item) => {
+            const unikKey = `${item.id_jadwal}_${item.tanggal_absen}`;
+            if (!checkedKeys.has(unikKey)) {
+              checkedKeys.add(unikKey);
+              terfilter.push(item);
+            }
+          });
+          terfilter.reverse(); // Kembalikan urutan semula
+        }
+
+        setDataAbsen(terfilter);
       } catch (err) {
         console.error("Gagal memuat data:", err);
       } finally {
@@ -23,59 +40,53 @@ export default function Absensi() {
     fetchData();
   }, []);
 
-  // AGREGASI DATA (Dioptimalkan dengan useMemo)
-  const { matakuliah, ringkasan } = useMemo(() => {
-    const map = dataAbsen.reduce((acc, curr) => {
-      const id = curr.id_jadwal;
-      if (!acc[id]) {
-        acc[id] = { id, mk: curr.jadwal?.mata_kuliah, kode: curr.jadwal?.kode_mk || curr.jadwal?.kode, sks: curr.jadwal?.sks, hadir: 0, total: 0 };
-      }
+  // 1. TRANSFORMASI DATA UNTUK MATA KULIAH (Dibatasi Maksimal 16 Pertemuan)
+  const matakuliahMap = dataAbsen.reduce((acc, curr) => {
+    const id = curr.id_jadwal;
+    if (!acc[id]) {
+      acc[id] = { id, mk: curr.jadwal?.mata_kuliah, kode: curr.jadwal?.kode_mk || curr.jadwal?.kode, sks: curr.jadwal?.sks, hadir: 0, total: 0 };
+    }
+    
+    // Batasi kalkulasi agar total pertemuan tidak melampaui standar akademik (16 kali)
+    if (acc[id].total < 16) {
       acc[id].total += 1;
       if (curr.status_kehadiran === 'Hadir') acc[id].hadir += 1;
-      acc[id].persentase = Math.round((acc[id].hadir / acc[id].total) * 100);
-      return acc;
-    }, {});
+    }
+    
+    acc[id].persentase = acc[id].total > 0 ? Math.round((acc[id].hadir / acc[id].total) * 100) : 0;
+    return acc;
+  }, {});
 
-    const ringkasanData = {
-      totalPertemuan: dataAbsen.length,
-      hadir: dataAbsen.filter(a => a.status_kehadiran === 'Hadir').length,
-      sakit: dataAbsen.filter(a => a.status_kehadiran === 'Sakit').length,
-      izin: dataAbsen.filter(a => a.status_kehadiran === 'Izin').length,
-      alpa: dataAbsen.filter(a => a.status_kehadiran === 'Alpa').length,
-      persentaseTotal: dataAbsen.length > 0 
-        ? Math.round((dataAbsen.filter(a => a.status_kehadiran === 'Hadir').length / dataAbsen.length) * 100) + "%" 
-        : "0%"
-    };
+  const matakuliah = Object.values(matakuliahMap);
 
-    return { matakuliah: Object.values(map), ringkasan: ringkasanData };
-  }, [dataAbsen]);
-
-  // Fungsi pembantu format tanggal
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  // 2. TRANSFORMASI DATA UNTUK RINGKASAN
+  const ringkasan = {
+    totalPertemuan: dataAbsen.length,
+    hadir: dataAbsen.filter(a => a.status_kehadiran === 'Hadir').length,
+    sakit: dataAbsen.filter(a => a.status_kehadiran === 'Sakit').length,
+    izin: dataAbsen.filter(a => a.status_kehadiran === 'Izin').length,
+    alpa: dataAbsen.filter(a => a.status_kehadiran === 'Alpa').length,
+    persentaseTotal: dataAbsen.length > 0 
+      ? Math.round((dataAbsen.filter(a => a.status_kehadiran === 'Hadir').length / dataAbsen.length) * 100) + "%" 
+      : "0%"
   };
 
   if (loading) return <div className="p-6 text-xs font-bold uppercase tracking-wider text-slate-400"><Loading/></div>;
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-gray-50/50 min-h-screen font-sans text-xs text-slate-700 w-full animate-fadeIn">
+    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full">
       {/* HEADER HALAMAN */}
       <div>
         <h2 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-2.5">
           <span className="w-1 h-5 bg-[#1a3a6b] rounded-full"></span>
           Presensi & Syarat Kelayakan Ujian
         </h2>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-            Aturan Akademik:
-          </span>
-          <div className="badge badge-error badge-outline text-[9px] font-bold px-2 py-0.5 h-auto rounded">
-            Batas Minimum Kehadiran Ikut UAS = 75%
-          </div>
-        </div>
+        <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wider">
+          Aturan Akademik: <span className="font-bold text-rose-600">Batas Minimum Kehadiran Ikut UAS = 75%</span>
+        </p>
       </div>
 
-      {/* KARTU STATISTIK RINGKASAN (Menggunakan DaisyUI Stats) */}
+      {/* KARTU STATISTIK RINGKASAN */}
       <section className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm col-span-2 flex flex-col justify-between">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Akumulasi Kehadiran Global</p>
@@ -118,18 +129,17 @@ export default function Absensi() {
                     </div>
                   </div>
                   
-                  {/* Progress Bar Visualisasi Kehadiran DaisyUI */}
-                  <progress 
-                    className={`progress w-full h-2 transition-all duration-300 ${diBawahAmbangBatas ? 'progress-error' : 'progress-success'}`} 
-                    value={Math.min(mk.persentase, 100)} 
-                    max="100"
-                  />
+                  {/* Progress Bar Visualisasi Kehadiran */}
+                  <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-300 ${diBawahAmbangBatas ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${Math.min(mk.persentase, 100)}%` }}
+                    />
+                  </div>
 
                   {/* Peringatan jika kehadiran kurang dari 75% */}
                   {diBawahAmbangBatas && (
-                    <div className="alert alert-error bg-rose-50 border-rose-200 text-rose-700 text-[10px] font-medium tracking-wide p-2 rounded-lg gap-2 mt-1">
-                      <span>⚠️ Kehadiran di bawah 75%, Anda terancam tidak dapat mengikuti UAS.</span>
-                    </div>
+                    <p className="text-[10px] text-rose-500 font-medium tracking-wide">⚠️ Kehadiran di bawah 75%, Anda terancam tidak dapat mengikuti UAS.</p>
                   )}
                 </div>
               );
@@ -148,15 +158,15 @@ export default function Absensi() {
               const isHadir = log.status_kehadiran === 'Hadir';
               const isSakitIzin = ['Sakit', 'Izin'].includes(log.status_kehadiran);
               return (
-                <div key={log.id_absen} className="p-3 bg-slate-50/60 border border-gray-100 rounded-lg flex justify-between items-center gap-2 hover:bg-gray-100/50 transition-colors">
+                <div key={log.id_absen} className="p-3 bg-slate-50/60 border border-gray-100 rounded-lg flex justify-between items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-bold text-slate-900 uppercase truncate tracking-wide">{log.jadwal?.mata_kuliah}</h4>
                     <p className="text-[10px] text-slate-400 font-mono mt-0.5">{log.tanggal_absen}</p>
                   </div>
-                  <span className={`badge badge-outline text-[9px] font-black uppercase tracking-wide px-2 py-2 h-auto rounded flex-shrink-0 ${
-                    isHadir ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 
-                    isSakitIzin ? 'border-amber-200 bg-amber-50 text-amber-700' : 
-                    'border-rose-200 bg-rose-50 text-rose-700'
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wide border flex-shrink-0 ${
+                    isHadir ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
+                    isSakitIzin ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                    'bg-rose-50 text-rose-700 border-rose-200'
                   }`}>
                     {log.status_kehadiran}
                   </span>

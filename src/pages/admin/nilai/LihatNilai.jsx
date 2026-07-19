@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { AiOutlineClose } from "react-icons/ai";
 import { nilaiAPI } from "../../../services/nilaiAPI";
-import Loading from "../../../components/admin/Loading";
 
 const LihatNilai = ({ idJadwal, namaMK, onTutup }) => {
   const [daftarNilaiMhs, setDaftarNilaiMhs] = useState([]);
@@ -12,7 +11,31 @@ const LihatNilai = ({ idJadwal, namaMK, onTutup }) => {
       setIsLoading(true);
       try {
         const data = await nilaiAPI.fetchDetailNilaiMahasiswa(idJadwal);
-        setDaftarNilaiMhs(data || []);
+        
+        // === PERBAIKAN 1: Filter Duplikasi Data Mahasiswa (Ambil entry terbaru) ===
+        const nilaiTerfilter = [];
+        const checkedMahasiswaIds = new Set();
+
+        if (data && Array.isArray(data)) {
+          // Balik data terlebih dahulu agar entry terbaru di database diproses duluan
+          [...data].reverse().forEach((item) => {
+            if (item.id_mahasiswa && !checkedMahasiswaIds.has(item.id_mahasiswa)) {
+              checkedMahasiswaIds.add(item.id_mahasiswa);
+              nilaiTerfilter.push(item);
+            }
+          });
+          // Kembalikan ke urutan semula sebelum di-sort
+          nilaiTerfilter.reverse();
+          
+          // === PERBAIKAN 2: Mengurutkan nama mahasiswa dari A sampai Z ===
+          nilaiTerfilter.sort((a, b) => {
+            const namaA = (a.mahasiswa?.nama || "").toUpperCase();
+            const namaB = (b.mahasiswa?.nama || "").toUpperCase();
+            return namaA.localeCompare(namaB);
+          });
+        }
+
+        setDaftarNilaiMhs(nilaiTerfilter);
       } catch (error) {
         console.error("Gagal memuat rincian nilai siswa:", error);
       } finally {
@@ -71,14 +94,14 @@ const LihatNilai = ({ idJadwal, namaMK, onTutup }) => {
                 daftarNilaiMhs.map((mhsNilai, idx) => (
                   <tr key={idx} className="hover:bg-gray-50/50 transition">
                     <td className="px-6 py-4 font-mono text-slate-900 font-bold tracking-wide">{mhsNilai.id_mahasiswa}</td>
-                    <td className="px-6 py-4 text-slate-800 font-bold">{mhsNilai.mahasiswa?.nama || "Mahasiswa"}</td>
+                    <td className="px-6 py-4 text-slate-800 font-bold uppercase">{mhsNilai.mahasiswa?.nama || "Mahasiswa"}</td>
                     <td className="px-6 py-4 text-center text-slate-500">{mhsNilai.nilai_tugas || 0}</td>
                     <td className="px-6 py-4 text-center text-slate-500">{mhsNilai.nilai_uts || 0}</td>
                     <td className="px-6 py-4 text-center text-slate-500">{mhsNilai.nilai_uas || 0}</td>
                     <td className="px-6 py-4 text-center text-slate-900 font-bold bg-slate-50/50">{mhsNilai.nilai_akhir || 0}</td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border inline-block leading-none ${
-                        ['A','B'].includes(mhsNilai.grade) 
+                        ['A','B+','B','B-'].includes(mhsNilai.grade) 
                           ? "bg-green-50 text-green-700 border-green-200" 
                           : "bg-amber-50 text-amber-700 border-amber-200"
                       }`}>

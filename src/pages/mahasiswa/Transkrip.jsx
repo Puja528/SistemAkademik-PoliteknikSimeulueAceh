@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'; // Tambahkan useMemo
+import React, { useState, useEffect } from 'react';
 import { nilaiAPI } from '../../services/nilaiAPI';
 import { mahasiswaAPI } from '../../services/mahasiswaAPI';
 import Loading from '../../components/admin/Loading';
@@ -15,14 +15,24 @@ export default function Transkrip() {
         if (!session) return;
 
         const profil = await mahasiswaAPI.fetchMahasiswaByUserId(session.id);
-        const nilaiData = await nilaiAPI.fetchKHSMahasiswa(profil.id_mahasiswa) || []; // Fallback ke array kosong jika null
+        const nilaiData = await nilaiAPI.fetchKHSMahasiswa(profil.id_mahasiswa);
         
+        // === PERBAIKAN 1: Filter data ganda (Duplikasi) berdasarkan id_jadwal terbaru ===
+        const nilaiTerfilter = [];
+        const checkedJadwalIds = new Set();
+
+        if (nilaiData && Array.isArray(nilaiData)) {
+          // Lakukan perulangan terbalik agar mendapatkan data perubahan terakhir
+          [...nilaiData].reverse().forEach((item) => {
+            if (item.id_jadwal && !checkedJadwalIds.has(item.id_jadwal)) {
+              checkedJadwalIds.add(item.id_jadwal);
+              nilaiTerfilter.push(item);
+            }
+          });
+        }
+
         // Urutkan nilai berdasarkan semester terkecil (S-1, S-2, dst) secara kronologis
-        const nilaiTerurut = [...nilaiData].sort((a, b) => {
-          const semA = Number(a.jadwal?.semester) || 0;
-          const semB = Number(b.jadwal?.semester) || 0;
-          return semA - semB;
-        });
+        const nilaiTerurut = nilaiTerfilter.sort((a, b) => (a.jadwal?.semester || 0) - (b.jadwal?.semester || 0));
         
         setDataAkademik({ profil, nilai: nilaiTerurut });
       } catch (err) {
@@ -34,11 +44,11 @@ export default function Transkrip() {
     muatData();
   }, []);
 
-  // --- 🛠️ FUNGSI UNTUK MENGONVERSI GRADE KE BOBOT AKADEMIK ---
-  const dapatkanBobotDariGrade = (grade) => {
+  // === PERBAIKAN 2: Fungsi Bantu Hitung Bobot Mutu (Skala 4.00) ===
+  const hitungBobotGrade = (grade) => {
     if (!grade) return 0;
     const g = grade.toUpperCase().trim();
-    if (g === 'A' || g === 'A+') return 4.0;
+    if (g === 'A') return 4.0;
     if (g === 'A-') return 3.7;
     if (g === 'B+') return 3.3;
     if (g === 'B') return 3.0;
@@ -46,44 +56,27 @@ export default function Transkrip() {
     if (g === 'C+') return 2.3;
     if (g === 'C') return 2.0;
     if (g === 'D') return 1.0;
-    return 0.0; // Untuk grade E / F / T
+    return 0.0;
   };
 
-  // ✅ MEMOISASI KAKULASI RINGKASAN AKADEMIK (SKS & IPK)
-  const ringkasanTranskrip = useMemo(() => {
-    let totalSKS = 0;
-    let totalBobotSKS = 0;
+  // Hitung akumulasi akumulatif total SKS lulus dari database (Kini Akurat)
+  const totalSksLulus = dataAkademik.nilai.reduce((acc, curr) => acc + (curr.jadwal?.sks || 0), 0);
 
-    dataAkademik.nilai.forEach(n => {
-      const sks = parseInt(n.jadwal?.sks, 10) || 0;
-      const bobot = dapatkanBobotDariGrade(n.grade);
-      totalBobotSKS += (bobot * sks);
-      totalSKS += sks;
-    });
+  // === PERBAIKAN 3: Kalkulasi IPK Kumulatif Otomatis secara Real-Time ===
+  const totalBobotKumu = dataAkademik.nilai.reduce((acc, curr) => acc + (hitungBobotGrade(curr.grade) * (curr.jadwal?.sks || 0)), 0);
+  const ipkOtomatis = totalSksLulus > 0 ? (totalBobotKumu / totalSksLulus).toFixed(2) : "0.00";
 
-    const ipk = totalSKS > 0 ? (totalBobotSKS / totalSKS).toFixed(2) : "0.00";
-
-    return {
-      totalSksLulus: totalSKS,
-      ipkKumulatif: ipk
-    };
-  }, [dataAkademik.nilai]);
-
-  // Fungsi utilitas penentu warna lencana grade (Diselaraskan dengan badge DaisyUI)
-  const getGradeClass = (grade) => {
-    if (!grade) return "badge-outline border-rose-200 bg-rose-50 text-rose-700";
-    const g = grade.toUpperCase().trim();
-    if (['A', 'A-', 'B+', 'A+'].includes(g))
-      return "badge-outline border-emerald-200 bg-emerald-50 text-emerald-700";
-    if (['B', 'B-', 'C+'].includes(g))
-      return "badge-outline border-amber-200 bg-amber-50 text-amber-700";
-    return "badge-outline border-rose-200 bg-rose-50 text-rose-700";
+  // Penentu warna teks grade huruf mutu
+  const getGradeColor = (grade) => {
+    if (['A', 'A-', 'B+'].includes(grade)) return 'text-emerald-600 font-black';
+    if (['B', 'B-', 'C+'].includes(grade)) return 'text-amber-600 font-black';
+    return 'text-rose-600 font-black';
   };
 
-  if (loading) return <div className="p-6 text-xs font-bold uppercase tracking-wider text-slate-400 flex justify-center items-center h-40"><Loading/></div>;
+  if (loading) return <div className="p-6 text-xs font-bold uppercase tracking-wider text-slate-400"><Loading/></div>;
 
   return (
-    <main className="p-6 bg-gray-50/50 min-h-screen font-sans text-xs text-slate-700 w-full flex flex-col gap-6 animate-fadeIn">
+    <main className="p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full flex flex-col gap-6">
       {/* Identitas Ringkas Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -99,28 +92,21 @@ export default function Transkrip() {
 
       {/* Widget Makro Transkrip Grid Card */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: "IPK Kumulatif Akhir (Dinamis)", val: ringkasanTranskrip.ipkKumulatif, sub: "Akumulasi Keseluruhan" },
-          { label: "Total SKS Diperoleh", val: `${ringkasanTranskrip.totalSksLulus} SKS`, sub: "Kredit Diambil" },
-          { 
-            label: "Status Mahasiswa", 
-            val: dataAkademik.profil?.status || "Aktif", 
-            sub: "Status Registrasi",
-            isStatus: true 
-          }
-        ].map((stat, i) => (
-          <div key={i} className="bg-white p-5 rounded-xl border border-gray-200/80 shadow-sm">
-            <p className="text-[13px] font-medium text-gray-500 mb-1.5">{stat.label}</p>
-            <p className={`text-[32px] font-extrabold tracking-tight leading-none mt-1 ${
-              stat.isStatus
-                ? (dataAkademik.profil?.status === "Aktif" || !dataAkademik.profil ? "text-emerald-600" : "text-amber-500")
-                : (i === 0 ? "text-[#1a3a6b]" : "text-gray-900")
-            }`}>
-              {stat.val}
-            </p>
-            <p className="text-[11.5px] text-gray-400 mt-2">{stat.sub}</p>
-          </div>
-        ))}
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">IPK Kumulatif Akhir</p>
+          {/* Menggunakan nilai dari database jika ada, jika tidak, tampilkan kalkulasi otomatis */}
+          <p className="text-xl font-black text-[#1a3a6b] tracking-tight mt-1">
+            {dataAkademik.profil?.ipk && dataAkademik.profil?.ipk !== "0.00" ? dataAkademik.profil?.ipk : ipkOtomatis}
+          </p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total SKS Diperoleh</p>
+          <p className="text-xl font-black text-slate-900 tracking-tight mt-1">{totalSksLulus} SKS</p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status Mahasiswa</p>
+          <p className="text-xl font-black text-emerald-600 tracking-tight mt-1 uppercase">{dataAkademik.profil?.status || "Aktif"}</p>
+        </div>
       </section>
 
       {/* Area Tabel Transkrip */}
@@ -131,24 +117,23 @@ export default function Transkrip() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
-                <tr className="bg-transparent border-b border-gray-100">
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400 text-center w-28">Semester</th>
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Mata Kuliah</th>
-                  <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400 text-center w-32">Kredit SKS</th>
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400 text-center w-28">Huruf Mutu</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-24">Semester</th>
+                  <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Mata Kuliah</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-32">Kredit SKS</th>
+                  <th className="px-5 py-3 text-[10px] font-black uppercase tracking-wider text-slate-400 text-center w-28">Huruf Mutu</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {dataAkademik.nilai.length > 0 ? (
                   dataAkademik.nilai.map((t) => (
-                    <tr key={t.id} className="hover:bg-gray-50/70 transition-colors">
-                      <td className="px-5 py-3.5 text-[13px] text-center font-bold text-slate-400 bg-gray-50/30 font-mono">SEMESTER {t.jadwal?.semester || '?'}</td>
-                      <td className="px-5 py-3.5 text-[13px] font-bold text-slate-700 uppercase">{t.jadwal?.mata_kuliah}</td>
-                      <td className="px-4 py-3.5 text-[13px] text-center font-bold text-slate-600 font-mono">{t.jadwal?.sks || 0} SKS</td>
-                      <td className="px-5 py-3.5 text-center">
-                        <span className={`badge px-2.5 py-1 text-[10px] font-black tracking-wide uppercase ${getGradeClass(t.grade)}`}>
-                          {t.grade || 'N/A'}
-                        </span>
+                    // Menggunakan id_jadwal agar key unik dan stabil
+                    <tr key={t.id_jadwal || t.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-5 py-3.5 text-xs text-center font-bold text-slate-400 bg-slate-50/40 font-mono">SEMESTER {t.jadwal?.semester || '?'}</td>
+                      <td className="px-5 py-3.5 text-xs font-bold text-slate-900 uppercase">{t.jadwal?.mata_kuliah}</td>
+                      <td className="px-4 py-3.5 text-xs text-center font-bold text-slate-700 font-mono">{t.jadwal?.sks || 0} SKS</td>
+                      <td className={`px-5 py-3.5 text-center text-xs uppercase tracking-wide ${getGradeColor(t.grade)}`}>
+                        {t.grade || 'N/A'}
                       </td>
                     </tr>
                   ))

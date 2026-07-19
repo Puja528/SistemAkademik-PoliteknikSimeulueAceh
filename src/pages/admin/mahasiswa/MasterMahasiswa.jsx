@@ -17,12 +17,22 @@ const MasterMahasiswa = () => {
   const [isEditTerbuka, setIsEditTerbuka] = useState(false);
   const [isHapusTerbuka, setIsHapusTerbuka] = useState(false);
 
-  // Mengambil data mahasiswa dari API
   const ambilDataMahasiswa = async () => {
     try {
       setLoading(true);
       const data = await mahasiswaAPI.fetchMahasiswa();
-      setDataMhs(data ? [...data].reverse() : []);
+      
+      // === PERBAIKAN: Mengurutkan data mahasiswa secara Alfabetis A-Z ===
+      let dataTerurut = [];
+      if (data && Array.isArray(data)) {
+        dataTerurut = [...data].sort((a, b) => {
+          const namaA = (a.nama || "").toUpperCase();
+          const namaB = (b.nama || "").toUpperCase();
+          return namaA.localeCompare(namaB);
+        });
+      }
+      
+      setDataMhs(dataTerurut);
     } catch (error) {
       console.error("Error fetching data:", error);
       alert("Gagal mengambil data dari database: " + (error.response?.data?.message || error.message));
