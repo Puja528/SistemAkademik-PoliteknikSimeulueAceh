@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiSearch } from "react-icons/fi"; // Menggunakan FiSearch sesuai halaman acuan
-import { AiOutlineEye, AiOutlineCheckCircle, AiOutlineClockCircle } from "react-icons/ai";
+import { FiSearch, FiEye, FiCheckCircle, FiClock, FiChevronDown } from "react-icons/fi";
 import { nilaiAPI } from "../../../services/nilaiAPI";
 import LihatNilai from "./LihatNilai"; 
 import Loading from "../../../components/admin/Loading";
@@ -23,7 +22,7 @@ const PublikasiNilai = () => {
       setDataPublikasi(data || []);
     } catch (error) {
       console.error("Gagal mengambil antrean nilai:", error);
-      setPesanEror("Gagal mengambil data antrean nilai dari server.");
+      setPesanEror("Gagal mengambil data antrean nilai dari server Supabase.");
     } finally {
       setIsLoading(false);
     }
@@ -59,9 +58,9 @@ const PublikasiNilai = () => {
   });
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700">
+    <div className="flex flex-col gap-5 p-6 bg-gray-50/50 min-h-screen font-sans relative animate-fadeIn">
 
-      {/* 1. AREA CARD SEARCH & FILTER (100% Identik dengan Halaman Acuan) */}
+      {/* 1. FILTER BAR (Menggunakan Dropdown DaisyUI) */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row gap-3 justify-between items-center">
         
         {/* Input Pencarian */}
@@ -69,38 +68,90 @@ const PublikasiNilai = () => {
           <FiSearch className="absolute left-3 top-2.5 text-gray-400 text-xs" />
           <input
             type="text"
-            placeholder="Cari mata kuliah, kode, NIDN..."
+            placeholder="Cari mata kuliah atau NIDN..."
             value={cari}
             onChange={(e) => setCari(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs bg-gray-50 focus:outline-none focus:border-slate-400 transition"
+            className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs bg-gray-50 focus:outline-none focus:border-slate-400 transition text-slate-700"
           />
         </div>
 
         {/* Dropdown Filter */}
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto justify-end">
-          <select
-            value={filterKelas}
-            onChange={(e) => setFilterKelas(e.target.value)}
-            className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer max-w-xs truncate focus:outline-none"
-          >
-            <option value="Semua Kelas">Semua Kelas</option>
-            <option value="A">Kelas A</option>
-            <option value="B">Kelas B</option>
-          </select>
           
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer max-w-xs truncate focus:outline-none"
-          >
-            <option value="Semua Status">Semua Status</option>
-            <option value="Terbit">Terbit</option>
-            <option value="Draft">Draft</option>
-          </select>
+          {/* DROPDOWN FILTER KELAS */}
+          <div className="dropdown dropdown-bottom w-full sm:w-auto">
+            <div 
+              tabIndex={0} 
+              role="button" 
+              className="w-full sm:w-36 border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer flex items-center justify-between gap-2 hover:bg-gray-50/50 transition select-none"
+            >
+              <span className="truncate">{filterKelas === "Semua Kelas" ? "Semua Kelas" : `Kelas ${filterKelas}`}</span>
+              <FiChevronDown className="text-gray-400 shrink-0 text-[10px]" />
+            </div>
+            <ul 
+              tabIndex={0} 
+              className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-full sm:w-36 gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+            >
+              {[
+                { value: "Semua Kelas", label: "Semua Kelas" },
+                { value: "A", label: "Kelas A" },
+                { value: "B", label: "Kelas B" }
+              ].map((kelas) => (
+                <li key={kelas.value}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterKelas(kelas.value);
+                      if (document.activeElement) document.activeElement.blur();
+                    }}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-md block text-left w-full transition ${
+                      filterKelas === kelas.value ? "bg-blue-50 text-blue-700 hover:bg-blue-50" : "hover:bg-gray-100 text-slate-700"
+                    }`}
+                  >
+                    {kelas.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          {/* DROPDOWN FILTER STATUS TRANSMISI */}
+          <div className="dropdown dropdown-bottom w-full sm:w-auto">
+            <div 
+              tabIndex={0} 
+              role="button" 
+              className="w-full sm:w-36 border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer flex items-center justify-between gap-2 hover:bg-gray-50/50 transition select-none"
+            >
+              <span className="truncate">{filterStatus}</span>
+              <FiChevronDown className="text-gray-400 shrink-0 text-[10px]" />
+            </div>
+            <ul 
+              tabIndex={0} 
+              className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-full sm:w-36 gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+            >
+              {["Semua Status", "Terbit", "Draft"].map((status) => (
+                <li key={status}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterStatus(status);
+                      if (document.activeElement) document.activeElement.blur();
+                    }}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-md block text-left w-full transition ${
+                      filterStatus === status ? "bg-blue-50 text-blue-700 hover:bg-blue-50" : "hover:bg-gray-100 text-slate-700"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
         </div>
       </div>
 
-      {/* 2. AREA TABEL UTAMA */}
+      {/* 2. TABEL DATA */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex-1">
         
         {pesanEror && (
@@ -110,21 +161,21 @@ const PublikasiNilai = () => {
         )}
 
         <div className="overflow-x-auto rounded-lg border border-gray-100">
-          <table className="w-full border-collapse text-xs">
+          <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                <th className="text-left px-4 py-3.5">Kode MK</th>
-                <th className="text-left px-4 py-3.5">Mata Kuliah & NIDN</th>
-                <th className="text-left px-4 py-3.5">Kelas Paket</th>
-                <th className="text-left px-4 py-3.5">Tanggal Masuk</th>
-                <th className="text-left px-4 py-3.5">Status Transmisi</th>
-                <th className="text-center px-4 py-3.5 w-60">Aksi Staff</th>
+              <tr className="bg-gray-50 border-b border-gray-100 text-gray-400">
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Kode MK</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Mata Kuliah & NIDN</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Kelas Paket</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Tanggal Masuk</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Status Transmisi</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-center w-60">Aksi Staff</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-slate-600">
+            <tbody className="divide-y divide-gray-50">
               {isLoading ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-10 text-center text-gray-400 font-medium">
+                  <td colSpan="6" className="px-4 py-10 text-center text-gray-400">
                     <Loading />
                   </td>
                 </tr>
@@ -132,26 +183,26 @@ const PublikasiNilai = () => {
                 nilaiTerfilter.map((pub, index) => {
                   const statusAsli = pub.status_nilai || "Draft";
                   return (
-                    <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-3.5 font-mono text-gray-400 font-bold tracking-wide">{pub.kode_mk}</td>
-                      <td className="px-4 py-3.5">
-                        <div className="text-slate-900 font-bold leading-snug">{pub.mata_kuliah}</div>
+                    <tr key={index} className="hover:bg-gray-50/70 transition-colors">
+                      <td className="px-4 py-3 font-mono text-[12px] text-gray-400 font-bold">{pub.kode_mk}</td>
+                      <td className="px-4 py-3">
+                        <div className="text-[13px] font-bold text-slate-800 uppercase leading-snug">{pub.mata_kuliah}</div>
                         <div className="text-[11px] text-gray-400 mt-0.5 font-medium">NIDN: {pub.nidn_dosen}</div>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <span className="px-2.5 py-1 bg-gray-100 text-slate-700 rounded-md font-bold text-[10px]">
+                      <td className="px-4 py-3 text-[13px] text-gray-500 font-medium">
+                        <span className="px-2 py-0.5 bg-gray-100 text-slate-700 rounded border border-gray-200 font-bold text-[10px]">
                           Kelas {pub.kelas}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 text-gray-500">{pub.tanggal_input_nilai || "-"}</td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-3 text-[13px] text-gray-500 font-medium">{pub.tanggal_input_nilai || "-"}</td>
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           {statusAsli === "Terbit" ? (
-                            <AiOutlineCheckCircle className="text-emerald-500 text-base shrink-0" />
+                            <FiCheckCircle className="text-emerald-500 text-sm shrink-0" />
                           ) : (
-                            <AiOutlineClockCircle className="text-amber-500 text-base shrink-0" />
+                            <FiClock className="text-amber-500 text-sm shrink-0" />
                           )}
-                          <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border inline-block leading-none ${
+                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded border inline-block leading-none ${
                             statusAsli === "Terbit"
                               ? "bg-green-50 text-green-700 border-green-200"
                               : "bg-amber-50 text-amber-700 border-amber-200"
@@ -162,14 +213,14 @@ const PublikasiNilai = () => {
                       </td>
                       
                       {/* Kolom Aksi Staff */}
-                      <td className="px-4 py-3.5 text-center">
+                      <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
                             type="button"
                             onClick={() => setModalLihatDetail({ terbuka: true, idJadwal: pub.id_jadwal, namaMK: pub.mata_kuliah })}
                             className="bg-white text-slate-600 border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg font-semibold text-xs inline-flex items-center justify-center gap-1.5 transition duration-150 cursor-pointer whitespace-nowrap min-w-[100px]"
                           >
-                            <AiOutlineEye className="text-sm shrink-0" />
+                            <FiEye className="text-xs shrink-0 text-gray-400" />
                             <span>Lihat Nilai</span>
                           </button>
 
@@ -190,7 +241,7 @@ const PublikasiNilai = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-4 py-10 text-center text-gray-400 font-medium">
+                  <td colSpan="6" className="px-4 py-10 text-center text-gray-400 text-xs font-medium">
                     Tidak ada antrean publikasi nilai ditemukan.
                   </td>
                 </tr>

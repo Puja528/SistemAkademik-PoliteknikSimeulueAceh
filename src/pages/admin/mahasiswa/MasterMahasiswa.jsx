@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiSearch, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiAlertTriangle } from "react-icons/fi";
+import { FiSearch, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiAlertTriangle, FiChevronDown } from "react-icons/fi";
 import { mahasiswaAPI } from "../../../services/mahasiswaAPI.js";
 import TambahMahasiswa from "./TambahMahasiswa";
 import EditMahasiswa from "./EditMahasiswa";
@@ -13,11 +13,11 @@ const MasterMahasiswa = () => {
   const [filterStatus, setFilterStatus] = useState("Semua Status");
   const [isTambahTerbuka, setIsTambahTerbuka] = useState(false);
 
-  const [dropdownAktif, setDropdownAktif] = useState(null);
   const [dataTerpilih, setDataTerpilih] = useState(null);
   const [isEditTerbuka, setIsEditTerbuka] = useState(false);
   const [isHapusTerbuka, setIsHapusTerbuka] = useState(false);
 
+  // Mengambil data mahasiswa dari API
   const ambilDataMahasiswa = async () => {
     try {
       setLoading(true);
@@ -55,6 +55,7 @@ const MasterMahasiswa = () => {
     }
   };
 
+  // Logika Penyaringan Data
   const dataTerfilter = dataMhs.filter((mhs) => {
     const namaMhs = mhs?.nama ? mhs.nama.toLowerCase() : "";
     const idMhs = mhs?.id_mahasiswa ? mhs.id_mahasiswa.toLowerCase() : "";
@@ -67,11 +68,10 @@ const MasterMahasiswa = () => {
   });
 
   return (
-    <div className="flex flex-col gap-5 p-6 bg-gray-50/50 min-h-screen font-sans relative">
+    <div className="flex flex-col gap-5 p-6 bg-gray-50/50 min-h-screen font-sans animate-fadeIn">
       
       {/* 1. FILTER BAR */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row gap-3 justify-between items-center">
-        
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-xs flex flex-col md:flex-row gap-3 justify-between items-center">
         <div className="relative w-full md:w-80">
           <FiSearch className="absolute left-3 top-2.5 text-gray-400 text-xs" />
           <input
@@ -84,31 +84,77 @@ const MasterMahasiswa = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto justify-end">
-          <select 
-            value={filterProdi}
-            onChange={(e) => setFilterProdi(e.target.value)}
-            className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer max-w-xs truncate focus:outline-none"
-          >
-            <option>Semua Program Studi</option>
-            <option>D4 Pengolahan dan Penyimpanan Hasil Perikanan</option>
-            <option>D3 Perikanan Tangkap</option>
-            <option>D3 Budi Daya Ikan</option>
-          </select>
+          
+          {/* DROPDOWN FILTER PROGRAM STUDI */}
+          <div className="dropdown dropdown-bottom w-full sm:w-auto">
+            <div 
+              tabIndex={0} 
+              role="button" 
+              className="w-full sm:w-64 border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer flex items-center justify-between gap-2 hover:bg-gray-50/50 transition select-none"
+            >
+              <span className="truncate">{filterProdi}</span>
+              <FiChevronDown className="text-gray-400 shrink-0 text-[10px]" />
+            </div>
+            <ul 
+              tabIndex={0} 
+              className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-full sm:w-64 gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+            >
+              {["Semua Program Studi", "D4 Pengolahan dan Penyimpanan Hasil Perikanan", "D3 Perikanan Tangkap", "D3 Budi Daya Ikan"].map((prodi) => (
+                <li key={prodi}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterProdi(prodi);
+                      if (document.activeElement) document.activeElement.blur();
+                    }}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-md block text-left w-full transition ${
+                      filterProdi === prodi ? "bg-blue-50 text-blue-700 hover:bg-blue-50" : "hover:bg-gray-100 text-slate-700"
+                    }`}
+                  >
+                    {prodi}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer focus:outline-none"
-          >
-            <option>Semua Status</option>
-            <option>Aktif</option>
-            <option>Nonaktif</option>
-          </select>
+          {/* DROPDOWN FILTER STATUS */}
+          <div className="dropdown dropdown-bottom w-full sm:w-auto">
+            <div 
+              tabIndex={0} 
+              role="button" 
+              className="w-full sm:w-36 border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer flex items-center justify-between gap-2 hover:bg-gray-50/50 transition select-none"
+            >
+              <span className="truncate">{filterStatus}</span>
+              <FiChevronDown className="text-gray-400 shrink-0 text-[10px]" />
+            </div>
+            <ul 
+              tabIndex={0} 
+              className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-full sm:w-36 gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+            >
+              {["Semua Status", "Aktif", "Nonaktif"].map((status) => (
+                <li key={status}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterStatus(status);
+                      if (document.activeElement) document.activeElement.blur();
+                    }}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-md block text-left w-full transition ${
+                      filterStatus === status ? "bg-blue-50 text-blue-700 hover:bg-blue-50" : "hover:bg-gray-100 text-slate-700"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           <button 
             type="button"
             onClick={() => setIsTambahTerbuka(true)} 
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#1a3a6b] text-white rounded-lg px-4 py-1.5 hover:bg-[#244b86] transition font-medium text-xs shadow-sm cursor-pointer shrink-0"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#1a3a6b] text-white rounded-lg px-4 py-1.5 hover:bg-[#244b86] transition font-medium text-xs shadow-xs cursor-pointer shrink-0"
           >
             <FiPlus size={13} />
             <span>Tambah Mahasiswa</span>
@@ -117,36 +163,38 @@ const MasterMahasiswa = () => {
       </div>
 
       {/* 2. TABEL DATA */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex-1">
-        <div className="overflow-x-auto rounded-lg border border-gray-100">
-          <table className="w-full border-collapse">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs flex-1">
+        <div className="overflow-x-auto rounded-lg border border-gray-100 min-h-[300px]">
+          <table className="table w-full border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-gray-400">
-                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">ID Mahasiswa</th>
-                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Nama</th>
-                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Prodi</th>
-                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Kelas</th>
-                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Angkatan</th>
-                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left">Status</th>
-                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-center w-24">Aksi</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left bg-transparent">ID Mahasiswa</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left bg-transparent">Nama</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left bg-transparent">Prodi</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left bg-transparent">Kelas</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left bg-transparent">Angkatan</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-left bg-transparent">Status</th>
+                <th className="text-[11px] font-semibold uppercase tracking-wider px-4 py-2.5 text-center w-24 bg-transparent">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-10 text-center text-gray-400">
-                    <Loading/>
+                  <td colSpan="7" className="px-4 py-12 text-center text-gray-400">
+                    <div className="flex justify-center items-center w-full py-4">
+                      <Loading />
+                    </div>
                   </td>
                 </tr>
               ) : dataTerfilter.length > 0 ? (
-                dataTerfilter.map((mhs, idx) => (
+                dataTerfilter.map((mhs) => (
                   <tr key={mhs.id_mahasiswa} className="hover:bg-gray-50/70 transition-colors">
-                    <td className="px-4 py-3 font-mono text-[12px] text-gray-400 font-bold">{mhs.id_mahasiswa}</td>
-                    <td className="px-4 py-3 text-[13px] font-bold text-slate-800 uppercase">{mhs.nama}</td>
-                    <td className="px-4 py-3 text-[13px] text-gray-500 font-medium">{mhs.program_studi}</td>
-                    <td className="px-4 py-3 text-[13px] text-gray-500 font-semibold">{mhs.kelas?.nama_kelas || "-"}</td>
-                    <td className="px-4 py-3 text-[13px] text-gray-500 font-medium">{mhs.angkatan}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 font-mono text-[12px] text-gray-400 font-bold border-b border-gray-50">{mhs.id_mahasiswa}</td>
+                    <td className="px-4 py-3 text-[13px] font-bold text-slate-800 uppercase border-b border-gray-50">{mhs.nama}</td>
+                    <td className="px-4 py-3 text-[13px] text-gray-500 font-medium border-b border-gray-50">{mhs.program_studi}</td>
+                    <td className="px-4 py-3 text-[13px] text-gray-500 font-semibold border-b border-gray-50">{mhs.kelas?.nama_kelas || "-"}</td>
+                    <td className="px-4 py-3 text-[13px] text-gray-500 font-medium border-b border-gray-50">{mhs.angkatan}</td>
+                    <td className="px-4 py-3 border-b border-gray-50">
                       <span className={`px-2 py-0.5 text-[10px] font-bold rounded border inline-block leading-none ${
                         mhs.status === "Aktif" 
                           ? "bg-green-50 text-green-700 border-green-200" 
@@ -155,49 +203,58 @@ const MasterMahasiswa = () => {
                         {mhs.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center relative overflow-visible">
-                      <button 
-                        type="button"
-                        onClick={() => setDropdownAktif(dropdownAktif === idx ? null : idx)}
-                        className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition cursor-pointer"
-                      >
-                        <FiMoreHorizontal className="text-sm" />
-                      </button>
-
-                      {dropdownAktif === idx && (
-                        <div className="absolute right-12 top-1.5 w-28 bg-white border border-gray-200 shadow-xl rounded-lg p-1 z-50 text-left">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDataTerpilih(mhs);
-                              setIsEditTerbuka(true);
-                              setDropdownAktif(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-gray-50 rounded-md transition cursor-pointer"
-                          >
-                            <FiEdit2 className="text-gray-400 text-xs" />
-                            <span>Edit Data</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDataTerpilih(mhs);
-                              setIsHapusTerbuka(true);
-                              setDropdownAktif(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 rounded-md transition cursor-pointer"
-                          >
-                            <FiTrash2 className="text-red-400 text-xs" />
-                            <span>Hapus</span>
-                          </button>
+                    <td className="px-4 py-3 text-center !overflow-visible border-b border-gray-50">
+                      
+                      {/* DROPDOWN AKSI */}
+                      <div className="dropdown dropdown-bottom dropdown-end inline-block">
+                        <div 
+                          tabIndex={0} 
+                          role="button" 
+                          className="btn btn-outline btn-xs p-1 text-gray-400 border-none bg-transparent hover:bg-gray-100 hover:text-gray-600 transition h-auto min-h-0 rounded-md cursor-pointer flex items-center justify-center"
+                        >
+                          <FiMoreHorizontal className="text-sm" />
                         </div>
-                      )}
+                        <ul 
+                          tabIndex={0} 
+                          className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-28 gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+                        >
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDataTerpilih(mhs);
+                                setIsEditTerbuka(true);
+                                if (document.activeElement) document.activeElement.blur();
+                              }}
+                              className="px-2.5 py-1.5 text-[11px] font-bold rounded-md flex items-center gap-2 hover:bg-gray-100 text-slate-700 transition"
+                            >
+                              <FiEdit2 className="text-gray-400 text-xs" />
+                              <span>Edit Data</span>
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDataTerpilih(mhs);
+                                setIsHapusTerbuka(true);
+                                if (document.activeElement) document.activeElement.blur();
+                              }}
+                              className="px-2.5 py-1.5 text-[11px] font-bold rounded-md flex items-center gap-2 hover:bg-red-50 text-red-600 transition"
+                            >
+                              <FiTrash2 className="text-red-400 text-xs" />
+                              <span>Hapus</span>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-4 py-10 text-center text-gray-400 text-xs font-medium">
+                  <td colSpan="7" className="px-4 py-12 text-center text-gray-400 text-xs font-medium">
                     Data mahasiswa tidak ditemukan.
                   </td>
                 </tr>
@@ -223,7 +280,7 @@ const MasterMahasiswa = () => {
 
       {isHapusTerbuka && dataTerpilih && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-[99999]">
-          <div className="bg-white rounded-xl border border-gray-200 max-w-sm w-full p-5 text-center shadow-2xl animate-fadeIn">
+          <div className="bg-white rounded-xl border border-gray-200 max-w-sm w-full p-5 text-center shadow-2xl animate-scaleUp">
             <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3 text-red-600">
               <FiAlertTriangle className="text-lg" />
             </div>
@@ -242,7 +299,7 @@ const MasterMahasiswa = () => {
               <button 
                 type="button" 
                 onClick={tanganiHapusMhsDatabase} 
-                className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-2 rounded-lg transition shadow-sm cursor-pointer"
+                className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-2 rounded-lg transition shadow-xs cursor-pointer"
               >
                 Ya, Hapus Data
               </button>

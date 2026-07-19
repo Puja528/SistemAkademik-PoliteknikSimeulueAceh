@@ -2,76 +2,46 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   FiBook,
   FiUsers,
-  FiCheckSquare,
   FiBookOpen,
   FiCalendar,
   FiSearch,
+  FiClock,
+  FiCheckCircle,
+  FiChevronDown,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { dosenAPI } from "../../services/dosenAPI";
-import { jadwalAPI } from "../../services/jadwalAPI"; // 1. TAMBAHKAN IMPORT JADWAL API AGAR SINKRON
+import { jadwalAPI } from "../../services/jadwalAPI";
 import Loading from "../../components/admin/Loading.jsx";
 
-// Sama seperti pada Absensi.jsx: konfigurasi koneksi Supabase untuk query roster mahasiswa resmi
 const SUPABASE_URL = "https://mwkewvjpgcvlwgycdpvo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_-mjKGRjVH18ef1G8ZCjTHg_dcP5lVxK";
 
-const ProgressBar = ({ persen }) => {
-  const colorClass =
-    persen >= 80
-      ? "bg-green-500"
-      : persen >= 60
-        ? "bg-amber-400"
-        : "bg-red-500";
+const StatusBadge = ({ status }) => {
+  const isSelesai = status === "selesai";
+  const bgClass = isSelesai
+    ? "bg-green-50 text-green-700 border-green-200"
+    : "bg-amber-50 text-amber-700 border-amber-200";
+  
   return (
-    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all duration-700 ease-out ${colorClass}`}
-        style={{ width: `${persen}%` }}
-      />
+    <div className="flex items-center gap-1.5 justify-end">
+      {isSelesai ? (
+        <FiCheckCircle className="text-emerald-500 text-sm shrink-0" />
+      ) : (
+        <FiClock className="text-amber-500 text-sm shrink-0" />
+      )}
+      <span className={`px-2 py-0.5 text-[10px] font-bold rounded border inline-block leading-none ${bgClass}`}>
+        {isSelesai ? "Terbit (Akses Mhs Open)" : "Draft (Mhs Hidden)"}
+      </span>
     </div>
   );
 };
 
-const StatusBadge = ({ status }) => {
-  const isSelesai = status === "selesai";
-  const isSebagian = status === "sebagian";
-  const label = isSelesai ? "Selesai" : isSebagian ? "Sebagian" : "Belum Diisi";
-  const bgClass = isSelesai
-    ? "bg-green-50 text-green-700 border-green-200"
-    : isSebagian
-      ? "bg-amber-50 text-amber-700 border-amber-200"
-      : "bg-rose-50 text-rose-700 border-rose-200";
-  return (
-    <span
-      className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-bold border ${bgClass}`}
-    >
-      {label}
-    </span>
-  );
-};
-
-const TH = ({ children, className = "" }) => (
-  <th
-    className={`text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 py-3 border-b border-gray-200 text-left ${className}`}
-  >
-    {children}
-  </th>
-);
-
-const TD = ({ children, className = "" }) => (
-  <td
-    className={`px-3 py-3 text-xs text-slate-600 border-b border-gray-100 transition-colors ${className}`}
-  >
-    {children}
-  </td>
-);
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [waktu, setWaktu] = useState(new Date());
-  const [searchAbsen, setSearchAbsen] = useState("");
+  const [searchMatkul, setSearchMatkul] = useState("");
   const [filterNilai, setFilterNilai] = useState("semua");
   const [profilDosen, setProfilDosen] = useState(null);
   const [dataDosen, setDataDosen] = useState({
@@ -96,41 +66,31 @@ const Dashboard = () => {
         const localSession = JSON.parse(localStorage.getItem("siakad_session"));
         if (!localSession) return;
 
-        // 1. Ambil data profil dosen berdasarkan user ID session
         const profil = await dosenAPI.fetchDosenByUserId(localSession.id);
         if (didCancel) return;
         setProfilDosen(profil);
 
         if (profil) {
-          // 2. Ambil data dashboard dasar (nilai & absen)
           const dataDashboard = await dosenAPI.fetchDashboardData(profil.nidn);
           if (didCancel) return;
 
-          // 3. PERBAIKAN UTAMA: Ambil data master jadwal resmi dan saring lewat NIDN agar pasti sinkron
           const semuaJadwal = await jadwalAPI.fetchJadwal();
-          const jadwalSaya = semuaJadwal.filter(
-            (j) => j.nidn_dosen === profil.nidn,
-          );
+          const jadwalSaya = semuaJadwal.filter((j) => j.nidn_dosen === profil.nidn);
           if (didCancel) return;
 
-          // 4. Susun ulang data secara komprehensif ke state
           const dataDisesuaikan = {
             nilai: dataDashboard.nilai || [],
             absen: dataDashboard.absen || dataDashboard.disabled || [],
-            jadwal: jadwalSaya, // Memastikan array jadwal terisi dari master data jadwal
+            jadwal: jadwalSaya,
           };
 
           setDataDosen(dataDisesuaikan);
 
-          // 5. PERBAIKAN TOTAL MAHASISWA: hitung dari roster resmi per kelas (id_kelas),
-          // bukan dari dedup log absensi historis. Log absensi bisa berisi sisa data
-          // mahasiswa yang sudah pindah/keluar kelas, sehingga totalnya bisa lebih
-          // besar dari jumlah mahasiswa yang sebenarnya terdaftar aktif.
           const idKelasUnik = [
             ...new Set(
               jadwalSaya
                 .map((j) => j.id_kelas)
-                .filter((id) => id !== undefined && id !== null),
+                .filter((id) => id !== undefined && id !== null)
             ),
           ];
 
@@ -144,7 +104,7 @@ const Dashboard = () => {
                     apikey: SUPABASE_KEY,
                     Authorization: `Bearer ${SUPABASE_KEY}`,
                   },
-                },
+                }
               );
               if (didCancel) return;
 
@@ -153,13 +113,12 @@ const Dashboard = () => {
                 ...new Set(
                   rosterMhs
                     .map((m) => (m.id_mahasiswa ? String(m.id_mahasiswa) : null))
-                    .filter(Boolean),
+                    .filter(Boolean)
                 ),
               ];
               setTotalMahasiswaAktif(idMhsUnik.length);
             } catch (errMhs) {
               console.error("Gagal memuat roster mahasiswa aktif:", errMhs);
-              // Fallback: tetap pakai dedup dari log absensi kalau query roster gagal
               const fallbackId = (dataDisesuaikan.absen || [])
                 .map((a) => (a.id_mahasiswa ? String(a.id_mahasiswa) : null))
                 .filter(Boolean);
@@ -212,86 +171,62 @@ const Dashboard = () => {
       }));
   }, [dataDosen.jadwal, hariIniNormalized]);
 
-  const rekapAbsensiPerMahasiswa = useMemo(() => {
-    const map = {};
-
-    for (const a of dataDosen.absen || []) {
-      const id = a.id_mahasiswa;
-      if (!map[id]) {
-        map[id] = {
-          nim: id,
-          nama: a.mahasiswa?.nama || String(id),
-          total: 0,
-          hadir: 0,
-        };
-      }
-      map[id].total += 1;
-      if (a.status_kehadiran === "Hadir") map[id].hadir += 1;
-    }
-    return Object.values(map).map((m) => ({
-      ...m,
-      persen: m.total > 0 ? Math.round((m.hadir / m.total) * 100) : 0,
-      kehadiran: `${m.hadir}/${m.total} pertemuan`,
-    }));
-  }, [dataDosen.absen]);
-
-  const filteredAbsensi = useMemo(() => {
-    return rekapAbsensiPerMahasiswa.filter(
-      (item) =>
-        item.nama.toLowerCase().includes(searchAbsen.toLowerCase()) ||
-        String(item.nim).includes(searchAbsen),
-    );
-  }, [rekapAbsensiPerMahasiswa, searchAbsen]);
-
   const filteredNilai = useMemo(() => {
-    return (dataDosen.nilai || []).filter(
-      (item) =>
+    return (dataDosen.nilai || []).filter((item) => {
+      const namaMK = item.mata_kuliah ? item.mata_kuliah.toLowerCase() : "";
+      const cocokCari = namaMK.includes(searchMatkul.toLowerCase());
+      const cocokStatus =
         filterNilai === "semua" ||
-        (item.status_nilai === "Terbit" ? "selesai" : "belum") === filterNilai,
-    );
-  }, [dataDosen.nilai, filterNilai]);
+        (item.status_nilai === "Terbit" ? "selesai" : "belum") === filterNilai;
+      return cocokCari && cocokStatus;
+    });
+  }, [dataDosen.nilai, searchMatkul, filterNilai]);
 
-  if (isLoading)
+  const dapatkanLabelStatus = (val) => {
+    if (val === "selesai") return "Terbit";
+    if (val === "belum") return "Draft";
+    return "Semua Status Nilai";
+  };
+
+  if (isLoading) {
     return (
-      <div className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">
+      <div className="flex flex-col gap-5 p-6 bg-gray-50/50 min-h-screen font-sans justify-center items-center">
         <Loading />
       </div>
     );
+  }
 
   return (
-    <div className="p-6 flex flex-col gap-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full">
-      {/* KARTU WELCOME GRADIENT */}
+    <div className="flex flex-col gap-5 p-6 bg-gray-50/50 min-h-screen font-sans relative w-full animate-fadeIn">
+      
+      {/* 1. KARTU WELCOME GRADIENT */}
       <div
-        className="rounded-xl p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+        className="rounded-xl p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm cursor-pointer hover:opacity-95 transition-opacity duration-150"
         style={{
-          background:
-            "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)",
+          background: "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)",
         }}
+        onClick={() => navigate("/dosen/profil")}
       >
-        <div
-          onClick={() => navigate("/dosen/profil")}
-          className="cursor-pointer hover:opacity-90 transition-opacity"
-        >
-          <h1 className="text-lg font-black m-0 mb-1 tracking-tight">
+        <div>
+          <h1 className="text-base font-black m-0 mb-1 tracking-tight uppercase">
             Selamat Datang, {profilDosen?.nama}
           </h1>
-          <p className="text-xs opacity-85 m-0 font-medium">
-            NIDN: {profilDosen?.nidn} · Program Studi{" "}
-            {profilDosen?.program_studi}
+          <p className="text-[11px] opacity-85 m-0 font-medium">
+            NIDN: {profilDosen?.nidn} · Program Studi {profilDosen?.program_studi}
           </p>
         </div>
 
-        <div className="text-left sm:text-right flex-shrink-0 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/10 w-full sm:w-auto">
-          <div className="text-[10px] opacity-75 mb-0.5 font-bold uppercase tracking-wider">
+        <div className="text-left sm:text-right flex-shrink-0 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 w-full sm:w-auto">
+          <div className="text-[9px] opacity-75 mb-0.5 font-bold uppercase tracking-wider">
             {hari}
           </div>
-          <div className="text-lg font-mono font-black tracking-wider">
+          <div className="text-sm font-mono font-black tracking-wider">
             {jam} WIB
           </div>
         </div>
       </div>
 
-      {/* TIGA KARTU STATISTIK UTAMA */}
+      {/* 2. TIGA KARTU STATISTIK UTAMA */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           {
@@ -304,91 +239,134 @@ const Dashboard = () => {
           {
             icon: FiUsers,
             label: "Total Mahasiswa",
-            // Dihitung dari roster resmi per id_kelas (lihat useEffect di atas),
-            // sehingga selalu sinkron dengan jumlah yang didaftarkan admin —
-            // tidak lagi terpengaruh sisa data di log absensi historis.
             value: totalMahasiswaAktif,
             sub: "Kelas Yang Diampu",
             bgIcon: "bg-emerald-50 text-emerald-600",
           },
           {
             icon: FiBookOpen,
-            label: "Status Nilai",
+            label: "Status Transmisi Nilai",
             value: `${(dataDosen.nilai || []).filter((n) => n.status_nilai === "Terbit").length}/${dataDosen.nilai?.length || 0}`,
-            sub: "Selesai diinput",
+            sub: "Terbit / Total MK",
             bgIcon: "bg-purple-50 text-purple-600",
           },
         ].map(({ icon: Icon, label, value, sub, bgIcon }, i) => (
           <div
             key={i}
-            className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex justify-between items-center"
+            className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex justify-between items-center transition hover:bg-gray-50/30"
           >
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 {label}
               </span>
-              <h3 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
                 {value}
               </h3>
-              <span className="text-[11px] text-gray-400 font-medium block">
+              <span className="text-[10px] text-gray-400 font-medium block">
                 {sub}
               </span>
             </div>
-            <div className={`p-3.5 rounded-xl ${bgIcon}`}>
-              <Icon className="text-xl" />
+            <div className={`p-2.5 rounded-lg ${bgIcon} shrink-0`}>
+              <Icon className="text-base" />
             </div>
           </div>
         ))}
       </div>
 
-      {/* GRID DUA KOLOM: JADWAL & STATUS NILAI */}
+      {/* 3. FILTER BAR (Menggunakan Dropdown DaisyUI yang disamakan) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row gap-3 justify-between items-center">
+        <div className="relative w-full md:w-80">
+          <FiSearch className="absolute left-3 top-2.5 text-gray-400 text-xs" />
+          <input
+            type="text"
+            placeholder="Cari mata kuliah nilai..."
+            value={searchMatkul}
+            onChange={(e) => setSearchMatkul(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg pl-9 pr-4 py-1.5 text-xs bg-gray-50 focus:outline-none focus:border-slate-400 transition text-slate-700"
+          />
+        </div>
+
+        <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+          {/* DROPDOWN FILTER STATUS NILAI DAISYUI */}
+          <div className="dropdown dropdown-bottom dropdown-end w-full sm:w-auto">
+            <div 
+              tabIndex={0} 
+              role="button" 
+              className="w-full sm:w-44 border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer flex items-center justify-between gap-2 hover:bg-gray-50/50 transition select-none"
+            >
+              <span className="truncate">{dapatkanLabelStatus(filterNilai)}</span>
+              <FiChevronDown className="text-gray-400 shrink-0 text-[10px]" />
+            </div>
+            <ul 
+              tabIndex={0} 
+              className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-full sm:w-44 gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+            >
+              {[
+                { value: "semua", label: "Semua Status Nilai" },
+                { value: "selesai", label: "Terbit" },
+                { value: "belum", label: "Draft" }
+              ].map((status) => (
+                <li key={status.value}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterNilai(status.value);
+                      if (document.activeElement) document.activeElement.blur();
+                    }}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-md block text-left w-full transition ${
+                      filterNilai === status.value ? "bg-blue-50 text-blue-700 hover:bg-blue-50" : "hover:bg-gray-100 text-slate-700"
+                    }`}
+                  >
+                    {status.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. GRID DUA KOLOM: TABEL JADWAL & TABEL STATUS NILAI */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* KOTAK JADWAL MENGAJAR HARI INI */}
+        
+        {/* KOLOM KIRI: JADWAL HARI INI */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
-            <FiCalendar className="text-[#1a3a6b] text-sm" />
-            <span className="text-sm font-bold text-slate-950">
+          <div className="flex items-center gap-2 mb-3.5 border-b border-gray-100 pb-2">
+            <FiCalendar className="text-[#1a3a6b] text-xs" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
               Jadwal Mengajar Hari Ini
             </span>
           </div>
-          <div className="overflow-x-auto flex-1">
+          <div className="overflow-x-auto rounded-lg border border-gray-100">
             <table className="w-full border-collapse">
               <thead>
-                <tr>
-                  {["Jam", "Mata Kuliah", "Ruang"].map((h) => (
-                    <TH key={h}>{h}</TH>
-                  ))}
+                <tr className="bg-gray-50 border-b border-gray-100 text-gray-400">
+                  <th className="text-[11px] font-semibold uppercase tracking-wider px-3 py-2 text-left">Jam</th>
+                  <th className="text-[11px] font-semibold uppercase tracking-wider px-3 py-2 text-left">Mata Kuliah & Kelas</th>
+                  <th className="text-[11px] font-semibold uppercase tracking-wider px-3 py-2 text-left">Ruang</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {JADWAL_HARI_INI.length > 0 ? (
                   JADWAL_HARI_INI.map((j, i) => (
-                    <tr
-                      key={i}
-                      className="hover:bg-gray-50/50 transition-colors"
-                    >
-                      <td className="px-3 py-3 text-xs text-slate-900 font-bold font-mono whitespace-nowrap">
+                    <tr key={i} className="hover:bg-gray-50/70 transition-colors">
+                      <td className="px-3 py-2.5 text-[11px] text-slate-900 font-bold font-mono whitespace-nowrap">
                         {j.jam}
                       </td>
-                      <td className="px-3 py-3 text-xs">
-                        <div className="font-bold text-slate-800 uppercase">
-                          {j.matkul}
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-medium">
-                          Kelas {j.kelas}
+                      <td className="px-3 py-2.5">
+                        <div className="text-[12px] font-bold text-slate-800 uppercase leading-tight">{j.matkul}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 font-bold">
+                          <span className="px-1.5 py-0.5 bg-gray-150 rounded border border-gray-200">Kelas {j.kelas}</span>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-xs text-slate-700 font-semibold">
+                      <td className="px-3 py-2.5 text-[12px] text-slate-600 font-semibold">
                         {j.ruang}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan="3"
-                      className="text-center py-8 text-gray-400 font-medium"
-                    >
+                    <td colSpan="3" className="text-center py-8 text-gray-400 text-xs font-medium">
                       Tidak ada jadwal mengajar untuk hari ini.
                     </td>
                   </tr>
@@ -398,55 +376,43 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* KOTAK STATUS INPUT NILAI */}
+        {/* KOLOM KANAN: STATUS INPUT NILAI */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
-            <FiBookOpen className="text-[#1a3a6b] text-sm" />
-            <span className="text-sm font-bold text-slate-950">
-              Status Nilai Mata Kuliah
+          <div className="flex items-center gap-2 mb-3.5 border-b border-gray-100 pb-2">
+            <FiBookOpen className="text-[#1a3a6b] text-xs" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+              Status Transmisi Nilai Kuliah
             </span>
           </div>
-          <div className="overflow-x-auto flex-1">
+          <div className="overflow-x-auto rounded-lg border border-gray-100">
             <table className="w-full border-collapse">
               <thead>
-                <tr>
-                  <TH>Mata Kuliah & Kelas</TH>
-                  <TH className="text-right">Status</TH>
+                <tr className="bg-gray-50 border-b border-gray-100 text-gray-400">
+                  <th className="text-[11px] font-semibold uppercase tracking-wider px-3 py-2 text-left">Mata Kuliah</th>
+                  <th className="text-[11px] font-semibold uppercase tracking-wider px-3 py-2 text-right">Status Transmisi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredNilai.length > 0 ? (
                   filteredNilai.map((n, i) => (
-                    <tr
-                      key={i}
-                      className="hover:bg-gray-50/50 transition-colors"
-                    >
-                      <td className="px-3 py-3 text-xs">
-                        <div className="font-bold text-slate-800 uppercase">
-                          {n.mata_kuliah}
-                        </div>
+                    <tr key={i} className="hover:bg-gray-50/70 transition-colors">
+                      <td className="px-3 py-2.5">
+                        <div className="text-[12px] font-bold text-slate-800 uppercase leading-tight">{n.mata_kuliah}</div>
                         {n.kelas && (
-                          <div className="text-[11px] text-slate-400 font-medium">
-                            Kelas {n.kelas}
+                          <div className="text-[10px] text-gray-400 mt-0.5 font-medium">
+                            Kelas Paket: <span className="font-bold text-slate-600">{n.kelas}</span>
                           </div>
                         )}
                       </td>
-                      <td className="px-3 py-3 text-right">
-                        <StatusBadge
-                          status={
-                            n.status_nilai === "Terbit" ? "selesai" : "belum"
-                          }
-                        />
+                      <td className="px-3 py-2.5 text-right vertical-middle">
+                        <StatusBadge status={n.status_nilai === "Terbit" ? "selesai" : "belum"} />
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan="2"
-                      className="text-center py-8 text-gray-400 font-medium"
-                    >
-                      Data rekapitulasi nilai kosong.
+                    <td colSpan="2" className="text-center py-8 text-gray-400 text-xs font-medium">
+                      Data rekapitulasi nilai kosong atau tidak ditemukan.
                     </td>
                   </tr>
                 )}
@@ -454,6 +420,7 @@ const Dashboard = () => {
             </table>
           </div>
         </div>
+
       </div>
     </div>
   );

@@ -1,309 +1,314 @@
-import React, { useState, useEffect } from "react";
-import { FiSearch, FiUser, FiCheckSquare, FiSave, FiAlertCircle } from "react-icons/fi";
-import { jadwalAPI } from "../../services/jadwalAPI";
-import { dosenAPI } from "../../services/dosenAPI";
-import { absensiAPI } from "../../services/absensiAPI";
-import axios from "axios";
+import React, { useState, useEffect, useMemo } from "react";
+import { FiChevronDown } from "react-icons/fi"; // Ditambahkan untuk menyamakan ikon dengan dashboard dosen
+import { mahasiswaAPI } from "../../services/mahasiswaAPI";
+import { nilaiAPI } from "../../services/nilaiAPI";
 import Loading from "../../components/admin/Loading";
 
-export default function Absensi() {
-  const [daftarJadwal, setDaftarJadwal] = useState([]);
-  const [idJadwalTerpilih, setIdJadwalTerpilih] = useState("");
-  const [jadwalDetail, setJadwalDetail] = useState(null);
-  
-  const [daftarMahasiswa, setDaftarMahasiswa] = useState([]);
-  const [filterPertemuan, setFilterPertemuan] = useState("Pertemuan 1");
-  const [isLoading, setIsLoading] = useState(false);
+const TH = ({ children, className = "" }) => (
+  <th
+    className={`text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 border-b border-gray-100 text-left bg-transparent ${className}`}
+  >
+    {children}
+  </th>
+);
 
-  // 1. Ambil Data Awal Jadwal Dosen
+const TD = ({ children, className = "" }) => (
+  <td
+    className={`px-4 py-3.5 text-[13px] text-gray-600 border-b border-gray-50 transition-colors ${className}`}
+  >
+    {children}
+  </td>
+);
+
+export default function DashboardUtama() {
+  const [activeTab, setActiveTab] = useState("khs");
+  const [selectedSemester, setSelectedSemester] = useState("Semester 1");
+  const [dataAkademik, setDataAkademik] = useState({ profil: null, nilai: [] });
+  const [isLoading, setIsLoading] = useState(true);
+  const [waktu, setWaktu] = useState(new Date());
+
   useEffect(() => {
-    const muatJadwalAbsen = async () => {
-      try {
-        const localSession = localStorage.getItem("siakad_session");
-        if (!localSession) return;
-        const dataUserLogin = JSON.parse(localSession);
-
-        const dosenReal = await dosenAPI.fetchDosenByUserId(dataUserLogin.id);
-        if (!dosenReal) return;
-
-        const semuaJadwal = await jadwalAPI.fetchJadwal();
-        const jadwalSaya = semuaJadwal.filter(j => j.nidn_dosen === dosenReal.nidn);
-        setDaftarJadwal(jadwalSaya);
-        
-        if (jadwalSaya.length > 0) {
-          setIdJadwalTerpilih(jadwalSaya[0].id_jadwal);
-          setJadwalDetail(jadwalSaya[0]);
-        }
-      } catch (error) {
-        console.error("Gagal muat data absen:", error);
-      }
-    };
-    muatJadwalAbsen();
+    const timer = setInterval(() => setWaktu(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
-// 2. PERBAIKAN SAKTI: Auto-detect Pertemuan Menggunakan Query Langsung Via Axios
   useEffect(() => {
-    const deteksiPertemuanSelanjutnya = async () => {
-      if (!idJadwalTerpilih) return;
-      
+    const muatData = async () => {
       try {
-        // Bypass fungsi API bawaan yang mungkin menolak parameter "semua"
-        // Kita tembak langsung ke tabel absensi menggunakan axios seperti fungsi muatDaftarHadirMahasiswa Anda
-        const resAbsen = await axios.get(`https://mwkewvjpgcvlwgycdpvo.supabase.co/rest/v1/absensi`, {
-          params: { id_jadwal: `eq.${idJadwalTerpilih}` },
-          headers: {
-            apikey: "sb_publishable_-mjKGRjVH18ef1G8ZCjTHg_dcP5lVxK",
-            Authorization: "Bearer sb_publishable_-mjKGRjVH18ef1G8ZCjTHg_dcP5lVxK"
-          }
-        });
+        setIsLoading(true);
+        const localSession = localStorage.getItem("siakad_session");
+        if (!localSession) return;
 
-        const seluruhAbsenKelas = resAbsen.data || [];
-        
-        if (seluruhAbsenKelas.length > 0) {
-          // Cari list pertemuan unik yang sudah pernah di-input (misal: ["Pertemuan 1", "Pertemuan 2"])
-          const pertemuanDiisi = [...new Set(seluruhAbsenKelas.map(a => a.pertemuan))];
-          
-          // Ekstrak angka dari string pertemuan untuk mencari yang paling tinggi
-          const angkaPertemuan = pertemuanDiisi.map(p => {
-            if (!p) return 0;
-            const match = p.match(/\d+/);
-            return match ? parseInt(match[0], 10) : 0;
-          });
-          
-          const pertemuanTertinggi = Math.max(...angkaPertemuan, 0);
-          
-          // Tentukan pertemuan berikutnya (maksimal 16)
-          const nextPertemuan = pertemuanTertinggi < 16 ? pertemuanTertinggi + 1 : 16;
-          
-          // Set otomatis dropdown ke pertemuan berikutnya
-          setFilterPertemuan(`Pertemuan ${nextPertemuan}`);
-        } else {
-          // Jika kelas ini benar-benar belum punya record absen sama sekali
-          setFilterPertemuan("Pertemuan 1");
+        const dataUserLogin = JSON.parse(localSession);
+        const profil = await mahasiswaAPI.fetchMahasiswaByUserId(dataUserLogin.id);
+
+        if (profil) {
+          const nilaiData = await nilaiAPI.fetchKHSMahasiswa(profil.id_mahasiswa);
+          setDataAkademik({ profil, nilai: nilaiData || [] });
+
+          if (nilaiData && nilaiData.length > 0) {
+            const listSemester = nilaiData.map((n) => Number(n.jadwal?.semester) || 1);
+            const semesterTerbesar = Math.max(...listSemester);
+            setSelectedSemester(`Semester ${semesterTerbesar}`);
+          }
         }
       } catch (error) {
-        console.error("Gagal mendeteksi riwayat pertemuan kelas:", error);
-        setFilterPertemuan("Pertemuan 1"); // Fallback aman jika request gagal
+        console.error("Gagal sinkronisasi data:", error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Reset daftar mahasiswa di tabel agar dosen wajib klik "Tampilkan"
-      setDaftarMahasiswa([]);
     };
+    muatData();
+  }, []);
 
-    deteksiPertemuanSelanjutnya();
-  }, [idJadwalTerpilih]);
-
-  // 3. Fungsi Mengambil Daftar Mahasiswa & Status Absensi
-  const muatDaftarHadirMahasiswa = async () => {
-    if (!idJadwalTerpilih || !jadwalDetail) return;
-    setIsLoading(true);
-    try {
-      const absenTersimpan = await absensiAPI.fetchAbsensiKelas(idJadwalTerpilih, filterPertemuan);
-      
-      const targetKelasId = parseInt(jadwalDetail.id_kelas);
-      
-      const resMhs = await axios.get(`https://mwkewvjpgcvlwgycdpvo.supabase.co/rest/v1/mahasiswa`, {
-        params: { id_kelas: `eq.${targetKelasId}` },
-        headers: {
-          apikey: "sb_publishable_-mjKGRjVH18ef1G8ZCjTHg_dcP5lVxK",
-          Authorization: "Bearer sb_publishable_-mjKGRjVH18ef1G8ZCjTHg_dcP5lVxK"
-        }
-      });
-      
-      const masterMhs = resMhs.data || [];
-
-      const lembarAbsen = masterMhs.map((mhs, idx) => {
-        const match = absenTersimpan.find(a => a.id_mahasiswa === mhs.id_mahasiswa);
-        return {
-          no: idx + 1,
-          id_mahasiswa: mhs.id_mahasiswa,
-          nama: mhs.nama,
-          status: match ? match.status_kehadiran : "Hadir", 
-          kehadiran: match ? (match.status_kehadiran === "Hadir" ? "100%" : "0%") : "100%"
-        };
-      });
-
-      setDaftarMahasiswa(lembarAbsen);
-    } catch (error) {
-      console.error("Gagal menyusun absensi kelas:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const dapatkanBobotDariGrade = (grade) => {
+    if (!grade) return 0;
+    const g = grade.toUpperCase().trim();
+    if (["A", "A+"].includes(g)) return 4.0;
+    if (g === "A-") return 3.7;
+    if (g === "B+") return 3.3;
+    if (g === "B") return 3.0;
+    if (g === "B-") return 2.7;
+    if (g === "C+") return 2.3;
+    if (g === "C") return 2.0;
+    if (g === "D") return 1.0;
+    return 0.0;
   };
 
-  const handleStatusChange = (idMhs, statusBaru) => {
-    const updated = daftarMahasiswa.map((mhs) => {
-      if (mhs.id_mahasiswa === idMhs) {
-        const kehadiranBaru = statusBaru === "Hadir" ? "100%" : "0%"; 
-        return { ...mhs, status: statusBaru, kehadiran: kehadiranBaru };
-      }
-      return mhs;
+  const semFilter = useMemo(() => {
+    return Number(selectedSemester.split(" ")[1]) || 1;
+  }, [selectedSemester]);
+
+  const kalkulasiAkademik = useMemo(() => {
+    const nilaiSemesterTerpilih = dataAkademik.nilai.filter(
+      (n) => Number(n.jadwal?.semester) === semFilter
+    );
+
+    let totalBobotSksSem = 0;
+    let totalSksSem = 0;
+    nilaiSemesterTerpilih.forEach((n) => {
+      const sks = parseInt(n.jadwal?.sks, 10) || 0;
+      const bobot = dapatkanBobotDariGrade(n.grade);
+      totalBobotSksSem += bobot * sks;
+      totalSksSem += sks;
     });
-    setDaftarMahasiswa(updated);
+    const ips = totalSksSem > 0 ? (totalBobotSksSem / totalSksSem).toFixed(2) : "0.00";
+
+    let totalBobotSksAll = 0;
+    let totalSksAll = 0;
+    dataAkademik.nilai.forEach((n) => {
+      const sks = parseInt(n.jadwal?.sks, 10) || 0;
+      const bobot = dapatkanBobotDariGrade(n.grade);
+      totalBobotSksAll += bobot * sks;
+      totalSksAll += sks;
+    });
+    const ipk = totalSksAll > 0 ? (totalBobotSksAll / totalSksAll).toFixed(2) : "0.00";
+
+    const listSemesterUnik = Array.from(
+      new Set(dataAkademik.nilai.map((n) => Number(n.jadwal?.semester) || 1))
+    ).sort((a, b) => a - b);
+
+    const transkripTerurut = [...dataAkademik.nilai].sort(
+      (a, b) => (Number(a.jadwal?.semester) || 0) - (Number(b.jadwal?.semester) || 0)
+    );
+
+    return {
+      ips,
+      ipk,
+      totalSksSelesai: totalSksAll,
+      nilaiSemesterTerpilih,
+      transkripTerurut,
+      opsiSemester: listSemesterUnik.length > 0 ? listSemesterUnik : [1]
+    };
+  }, [dataAkademik.nilai, semFilter]);
+
+  const getGradeClass = (grade) => {
+    if (!grade) return "badge badge-outline border-rose-200 bg-rose-50 text-rose-700";
+    const g = grade.toUpperCase().trim();
+    if (["A", "A-", "B+", "A+"].includes(g))
+      return "badge badge-outline border-emerald-200 bg-emerald-50 text-emerald-700";
+    if (["B", "B-", "C+"].includes(g))
+      return "badge badge-outline border-amber-200 bg-amber-50 text-amber-700";
+    return "badge badge-outline border-rose-200 bg-rose-50 text-rose-700";
   };
 
-  const handleHadirSemua = () => {
-    const updated = daftarMahasiswa.map((mhs) => ({
-      ...mhs,
-      status: "Hadir",
-      kehadiran: "100%",
-    }));
-    setDaftarMahasiswa(updated);
+  const handleUnduhPDF = () => {
+    alert("Sistem Sedang Memproses: Mengunduh dokumen transkrip nilai resmi format PDF...");
   };
 
-  const handleSimpan = async () => {
-    if (daftarMahasiswa.length === 0) {
-      alert("Tidak ada data absensi mahasiswa yang bisa disimpan.");
-      return;
-    }
-    try {
-      const payloadAbsen = daftarMahasiswa.map(m => ({
-        id_jadwal: idJadwalTerpilih, 
-        id_mahasiswa: m.id_mahasiswa,
-        pertemuan: filterPertemuan,
-        status_kehadiran: m.status,
-        tanggal_absen: new Date().toISOString().split('T')[0]
-      }));
+  const hari = waktu.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const jam = waktu.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
-      await absensiAPI.simpanAbsensiKelas(payloadAbsen);
-      alert(`Data lembar absensi ${filterPertemuan} berhasil diunggah!`);
-      
-      // Sesaat setelah sukses menyimpan, picu pembaruan deteksi pertemuan berikutnya
-      // dengan merefresh ulang state idJadwalTerpilih secara paksa
-      const currentJadwal = idJadwalTerpilih;
-      setIdJadwalTerpilih("");
-      setTimeout(() => setIdJadwalTerpilih(currentJadwal), 10);
-
-    } catch (error) {
-      alert("Gagal mengunggah absensi: " + error.message);
-    }
-  };
-
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case "Hadir": return "bg-green-50 text-green-700 border-green-200";
-      case "Sakit": return "bg-blue-50 text-blue-700 border-blue-200";
-      case "Izin": return "bg-amber-50 text-amber-700 border-amber-200";
-      case "Alpa": return "bg-rose-50 text-rose-700 border-rose-200";
-      default: return "bg-gray-50 text-slate-600 border-gray-200";
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="text-xs font-bold uppercase tracking-wider text-slate-400 p-6 flex justify-center items-center h-40">
+        <Loading />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full animate-fadeIn">
+    <div className="p-6 flex flex-col gap-5 bg-gray-50/50 min-h-screen animate-fadeIn font-sans text-xs text-slate-700">
       
-      {/* 1. SEKSI FORM SELEKSI MATA KULIAH */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <h2 className="text-sm font-bold text-slate-950 mb-4">Pilih Mata Kuliah & Pertemuan</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Mata Kuliah</label>
-            <select 
-              value={idJadwalTerpilih}
-              onChange={(e) => {
-                const targetId = e.target.value;
-                setIdJadwalTerpilih(targetId);
-                setJadwalDetail(daftarJadwal.find(j => String(j.id_jadwal) === String(targetId)));
-              }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer focus:outline-none focus:border-slate-400 transition"
-            >
-              {daftarJadwal.map(j => (
-                <option key={j.id_jadwal} value={j.id_jadwal}>{j.mata_kuliah} - Kelas {j.kelas}</option>
-              ))}
-            </select>
+      {/* 1. SEKSI HEADER PORTAL */}
+      <div
+        className="rounded-xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+        style={{
+          background: "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)",
+        }}
+      >
+        <div>
+          <h1 className="text-xl font-bold m-0 mb-1.5 tracking-tight">
+            Portal Informasi Akademik
+          </h1>
+          <p className="text-[13px] opacity-80 m-0 leading-relaxed">
+            Selamat datang di halaman utama. Anda terdata sebagai mahasiswa aktif pada Program Studi{" "}
+            <strong className="text-white underline">
+              {dataAkademik.profil ? dataAkademik.profil.program_studi : "-"}
+            </strong>{" "}
+            dengan NIM{" "}
+            <strong className="text-white font-mono">
+              {dataAkademik.profil ? dataAkademik.profil.id_mahasiswa : "-"}
+            </strong>.
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0 bg-white/10 backdrop-blur-sm px-4 py-2.5 rounded-lg border border-white/10 self-start sm:self-auto">
+          <div className="text-[11px] opacity-75 mb-0.5 font-medium uppercase tracking-wider">
+            {hari}
           </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Pertemuan Ke-</label>
-            <select value={filterPertemuan} onChange={(e) => setFilterPertemuan(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer focus:outline-none focus:border-slate-400 transition">
-              {[...Array(16)].map((_, i) => <option key={i+1} value={`Pertemuan ${i+1}`}>Pertemuan {i+1}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Jam Kerja</label>
-            <div className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-gray-50 text-slate-500 font-medium min-h-[30px] flex items-center">
-              {jadwalDetail ? `${jadwalDetail.jam_mulai?.substring(0,5)} WIB` : "--:--"}
-            </div>
-          </div>
-          <div>
-            <button 
-              onClick={muatDaftarHadirMahasiswa} 
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-[#1a3a6b] text-white rounded-lg px-4 py-1.5 hover:bg-[#244b86] transition font-bold text-xs shadow-sm cursor-pointer h-[32px] disabled:opacity-50"
-            >
-              <FiSearch className="text-xs" /> {isLoading ? "Memuat..." : "Tampilkan"}
-            </button>
+          <div className="text-xl font-mono font-bold tracking-wider">
+            {jam} WIB
           </div>
         </div>
       </div>
 
-      {/* 2. AREA DETAIL JADWAL YANG TERPILIH */}
-      {jadwalDetail && (
-        <div className="text-white rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 shadow-sm animate-fadeIn" style={{ background: "linear-gradient(135deg, #1a3a6b 0%, #244b86 60%, #2e5fa3 100%)" }}>
-          <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Mata Kuliah</p><h4 className="font-bold text-xs mt-0.5">{jadwalDetail.mata_kuliah}</h4></div>
-          <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Ruangan</p><h4 className="font-bold text-xs mt-0.5">{jadwalDetail.ruangan}</h4></div>
-          <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Pertemuan Aktif</p><h4 className="font-bold text-xs mt-0.5 bg-yellow-400 text-slate-900 px-1.5 py-0.5 rounded font-black inline-block">{filterPertemuan}</h4></div>
-          <div><p className="text-[10px] opacity-75 font-bold uppercase tracking-wider">Tanggal Sesi</p><h4 className="font-bold text-xs mt-0.5">{new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</h4></div>
-        </div>
-      )}
-
-      {/* 3. AREA TABEL LEMBAR ABSENSI */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex-1">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-5">
-          <span className="font-bold text-slate-950 text-sm flex items-center gap-2"><FiUser className="text-slate-800" /> Daftar Mahasiswa</span>
-          {daftarMahasiswa.length > 0 && (
-            <div className="flex gap-2">
-              <button onClick={handleHadirSemua} className="flex items-center gap-1.5 bg-white text-slate-600 border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition text-xs font-bold cursor-pointer shadow-sm">
-                <FiCheckSquare className="text-emerald-600 text-sm" /> Hadir Semua
-              </button>
-              <button onClick={handleSimpan} className="flex items-center gap-1.5 bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition text-xs font-bold shadow-sm cursor-pointer">
-                <FiSave className="text-sm" /> Simpan Absensi
-              </button>
-            </div>
-          )}
-        </div>
-
-        {isLoading ? (
-          <div className="py-20 flex justify-center items-center"><Loading /></div>
-        ) : daftarMahasiswa.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border border-gray-100">
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="text-left px-4 py-3 w-12">No</th>
-                  <th className="text-left px-4 py-3">ID Mahasiswa</th>
-                  <th className="text-left px-4 py-3">Nama Mahasiswa</th>
-                  <th className="text-left px-4 py-3">Kehadiran</th>
-                  <th className="text-center px-4 py-3 w-40">Status Tindakan</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-slate-600">
-                {daftarMahasiswa.map((mhs) => (
-                  <tr key={mhs.id_mahasiswa} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3.5 text-gray-400 font-medium">{mhs.no}</td>
-                    <td className="px-4 py-3.5 font-mono text-slate-900 font-bold tracking-wide">{mhs.id_mahasiswa}</td>
-                    <td className="px-4 py-3.5 font-bold text-slate-800 uppercase">{mhs.nama}</td>
-                    <td className="px-4 py-3.5"><span className="text-slate-700 font-bold">{mhs.kehadiran}</span></td>
-                    <td className="px-4 py-3.5 text-center">
-                      <select 
-                        value={mhs.status} 
-                        onChange={(e) => handleStatusChange(mhs.id_mahasiswa, e.target.value)} 
-                        className={`w-full border rounded-lg px-2.5 py-1 text-[11px] font-bold focus:outline-none cursor-pointer transition leading-none text-center ${getStatusBadgeClass(mhs.status)}`}
-                      >
-                        <option value="Hadir" className="bg-white text-slate-800">Hadir</option>
-                        <option value="Sakit" className="bg-white text-slate-800">Sakit</option>
-                        <option value="Izin" className="bg-white text-slate-800">Izin</option>
-                        <option value="Alpa" className="bg-white text-slate-800">Alpa</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* 2. STATISTIK UTAMA */}
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: "IPK Kumulatif", value: kalkulasiAkademik.ipk, sub: "Akumulasi Keseluruhan" },
+          { label: "IP Semester (IPS)", value: kalkulasiAkademik.ips, sub: `Nilai ${selectedSemester}` },
+          { label: "SKS Selesai", value: `${kalkulasiAkademik.totalSksSelesai} SKS`, sub: "Total Kredit Lulus" },
+          { label: "Status Akademik", value: dataAkademik.profil ? dataAkademik.profil.status : "-", sub: "Status Registrasi", isStatus: true },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-200/80 p-5 shadow-sm">
+            <span className="text-[13px] text-gray-500 font-medium block mb-1.5">{stat.label}</span>
+            <span className={`text-[32px] font-extrabold tracking-tight block leading-none ${stat.isStatus ? dataAkademik.profil?.status === "Aktif" ? "text-emerald-600" : "text-amber-500" : "text-gray-900"}`}>
+              {stat.value}
+            </span>
+            <span className="text-[11.5px] text-gray-400 block mt-2">{stat.sub}</span>
           </div>
-        ) : (
-          <div className="text-center py-12 text-gray-400 flex flex-col items-center gap-2 border border-dashed border-gray-200 rounded-xl">
-            <FiAlertCircle size={24} className="text-gray-300" />
-            <p className="font-semibold text-xs text-gray-500">Pilih mata kuliah terlebih dahulu, lalu klik tombol Tampilkan.</p>
+        ))}
+      </section>
+
+      {/* 3. TABS NAVIGASI LEMBAR EVALUASI */}
+      <div className="bg-white rounded-xl border border-gray-200/80 p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <span className="text-[14px] font-bold text-gray-800">Lembar Hasil Studi & Transkrip Evaluasi</span>
+          <div className="join bg-gray-100 p-0.5 rounded-xl border border-gray-200/40 self-start sm:self-auto">
+            <button onClick={() => setActiveTab("khs")} className={`btn btn-xs join-item rounded-lg text-[11px] font-bold border-none px-4 py-1.5 h-auto min-h-0 transition-all duration-200 shadow-none ${activeTab === "khs" ? "bg-[#1a3a6b] text-white hover:bg-[#15305b] shadow-sm" : "bg-transparent text-gray-400 hover:text-gray-900 hover:bg-gray-200/50"}`}>KHS Per Semester</button>
+            <button onClick={() => setActiveTab("transkrip")} className={`btn btn-xs join-item rounded-lg text-[11px] font-bold border-none px-4 py-1.5 h-auto min-h-0 transition-all duration-200 shadow-none ${activeTab === "transkrip" ? "bg-[#1a3a6b] text-white hover:bg-[#15305b] shadow-sm" : "bg-transparent text-gray-400 hover:text-gray-900 hover:bg-gray-200/50"}`}>Transkrip Nilai</button>
+          </div>
+        </div>
+
+        {/* 4. RENDER ISI TAB KHS SEMESTER */}
+        {activeTab === "khs" && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-xs text-gray-500 uppercase tracking-wide">Rincian Komponen Nilai Berjalan</h4>
+              
+              {/* DROPDOWN DISAMAKAN PERSIS DENGAN Halaman ABSENSI DOSEN */}
+              <div className="dropdown dropdown-bottom dropdown-end">
+                <div 
+                  tabIndex={0} 
+                  role="button" 
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-xs bg-white text-slate-700 font-bold cursor-pointer flex items-center justify-between gap-2 hover:bg-gray-50/50 transition h-9 min-w-[130px] select-none"
+                >
+                  <span className="truncate">{selectedSemester}</span>
+                  <FiChevronDown className="text-gray-400 shrink-0 text-[10px]" />
+                </div>
+                <ul 
+                  tabIndex={0} 
+                  className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-full max-h-56 overflow-y-auto flex-col flex-nowrap gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+                >
+                  {kalkulasiAkademik.opsiSemester.map((sem) => {
+                    const valueSem = `Semester ${sem}`;
+                    return (
+                      <li key={sem} className="w-full">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSemester(valueSem);
+                            if (document.activeElement) document.activeElement.blur();
+                          }}
+                          className={`px-2.5 py-1.5 text-[11px] font-bold rounded-md block text-left w-full truncate transition ${
+                            selectedSemester === valueSem ? "bg-blue-50 text-blue-700 hover:bg-blue-50" : "hover:bg-gray-100 text-slate-700"
+                          }`}
+                        >
+                          {valueSem}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+            </div>
+            <div className="overflow-x-auto">
+              <table className="table w-full border-collapse">
+                <thead>
+                  <tr>
+                    <TH>Kode</TH><TH>Mata Kuliah</TH><TH className="text-center">SKS</TH><TH className="text-center">Grade Akhir</TH>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kalkulasiAkademik.nilaiSemesterTerpilih.map((n) => (
+                    <tr key={n.id} className="hover:bg-gray-50/70 transition-colors">
+                      <TD className="text-[#1a3a6b] font-bold font-mono">{n.jadwal?.kode_mk || "MK"}</TD>
+                      <TD className="font-semibold text-slate-700 uppercase">{n.jadwal?.mata_kuliah}</TD>
+                      <TD className="text-center font-bold text-slate-600 font-mono">{n.jadwal?.sks || 0} SKS</TD>
+                      <TD className="text-center"><span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-wide uppercase ${getGradeClass(n.grade)}`}>{n.grade || "E"}</span></TD>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 5. RENDER ISI TAB TRANSKRIP NILAI */}
+        {activeTab === "transkrip" && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-xs text-gray-500 uppercase tracking-wide">Rekapitulasi Akumulasi Kelulusan</h4>
+              <button onClick={handleUnduhPDF} className="btn btn-outline btn-xs border-slate-300 hover:border-[#1a3a6b] hover:bg-[#1a3a6b] text-slate-700 hover:text-white rounded-lg text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 h-auto min-h-0">Unduh PDF Transkrip</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="table w-full border-collapse">
+                <thead>
+                  <tr>
+                    <TH className="text-center w-32">Semester</TH><TH>Mata Kuliah</TH><TH className="text-center w-40">Capaian Grade</TH>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kalkulasiAkademik.transkripTerurut.map((t) => (
+                    <tr key={t.id} className="hover:bg-gray-50/70 transition-colors">
+                      <TD className="text-center text-gray-400 font-semibold font-mono">SEMESTER {t.jadwal?.semester || "?"}</TD>
+                      <TD className="font-semibold text-slate-700 uppercase">{t.jadwal?.mata_kuliah}</TD>
+                      <TD className="text-center"><span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-wide uppercase ${getGradeClass(t.grade)}`}>{t.grade || "E"}</span></TD>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

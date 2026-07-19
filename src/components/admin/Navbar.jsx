@@ -23,56 +23,60 @@ const Navbar = ({ toggleSidebar }) => {
     }
   };
 
-  // ── DATA BACKEND: Mengambil session admin jika ada (Opsional) ──
+  // ── DATA BACKEND: Mengambil session admin jika ada ──
   const localSession = localStorage.getItem("siakad_session");
   const userLogin = localSession ? JSON.parse(localSession) : null;
 
   const namaUserReal = userLogin?.nama || "Admin";
-  const inisialAvatar = namaUserReal.substring(0, 2).toUpperCase(); // Mengambil inisial "AU" atau "AD"
+  const inisialAvatar = namaUserReal.substring(0, 2).toUpperCase();
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex justify-between items-center sticky top-0 z-10 w-full h-16 shrink-0 font-sans">
+    <header className="bg-white border-b border-gray-100 px-4 md:px-6 flex justify-between items-center sticky top-0 z-10 w-full h-16 shrink-0 font-sans shadow-sm/5">
       {/* SISI KIRI: Tombol Hamburger & Judul Halaman */}
       <div className="flex items-center gap-3">
         <button
           onClick={toggleSidebar}
           type="button"
-          className="p-1.5 text-slate-600 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer md:hidden flex-shrink-0"
+          className="btn btn-ghost btn-xs h-8 w-8 p-0 text-slate-600 md:hidden flex-shrink-0 rounded-lg hover:bg-gray-50"
           aria-label="Open Menu"
         >
           <FiMenu size={18} />
         </button>
 
         {/* JUDUL HALAMAN */}
-        <h1 className="text-[14px] md:text-[15px] font-medium text-slate-800 tracking-wide truncate max-w-[150px] sm:max-w-none m-0">
+        <h1 className="text-xs md:text-[13px] font-bold text-slate-800 uppercase tracking-wider truncate max-w-[150px] sm:max-w-none m-0 flex items-center gap-2">
+          <span className="w-1 h-3.5 bg-[#1a3a6b] rounded-full hidden sm:inline-block"></span>
           {dapatkanJudulHalaman()}
         </h1>
       </div>
 
       {/* SISI KANAN: Panel Notifikasi & Profil */}
       <div className="flex items-center gap-3 md:gap-4">
-        {/* Notifikasi Bell */}
+        {/* Notifikasi Bell menggunakan Indicator DaisyUI */}
         <button
           type="button"
-          className="relative text-gray-400 hover:text-[#1a3a6b] transition-colors cursor-pointer p-1"
+          className="btn btn-ghost btn-xs h-8 w-8 p-0 text-gray-400 hover:text-[#1a3a6b] rounded-lg indicator"
         >
           <AiOutlineBell className="text-lg" />
-          <span className="absolute top-1 right-1 bg-red-500 w-1.5 h-1.5 rounded-full"></span>
+          <span className="indicator-item badge badge-error badge-xs w-2 h-2 p-0 top-2 right-2"></span>
         </button>
 
-        {/* Profil Akun (Sama persis skalanya dengan layout Mahasiswa) */}
-        <div className="flex items-center gap-2 md:gap-3 border-l border-gray-200 pl-3 md:pl-4">
-          {/* Avatar Bulat Inisial */}
-          <div className="w-8 h-8 rounded-full bg-[#f0f4f8] text-[#1a3a6b] flex items-center justify-center font-bold text-xs tracking-wider flex-shrink-0 shadow-sm">
-            {inisialAvatar}
+        {/* Profil Akun menggunakan Avatar DaisyUI */}
+        <div className="flex items-center gap-2 md:gap-3 border-l border-gray-100 pl-3 md:pl-4">
+          {/* Avatar Bulat Inisial DaisyUI */}
+          <div className="avatar placeholder flex-shrink-0">
+            {/* Menambahkan flex items-center justify-center agar inisial pas di tengah */}
+            <div className="w-8 h-8 rounded-full bg-[#f0f4f8] text-[#1a3a6b] font-black text-xs tracking-wider shadow-inner flex items-center justify-center">
+              <span>{inisialAvatar}</span>
+            </div>
           </div>
 
-          {/* Detail Nama & Role: Disembunyikan di smartphone kecil agar tidak sesak (Bergeser ke kanan setelah Avatar) */}
+          {/* Detail Nama & Role */}
           <div className="hidden md:block text-left leading-tight">
-            <p className="text-xs font-bold text-gray-800 m-0 mt-0.5">
+            <p className="text-xs font-bold text-slate-800 m-0 uppercase tracking-wide">
               {namaUserReal}
             </p>
-            <p className="text-[9px] text-slate-400 uppercase font-medium tracking-wider m-0">
+            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider m-0 mt-0.5">
               System Administrator
             </p>
           </div>

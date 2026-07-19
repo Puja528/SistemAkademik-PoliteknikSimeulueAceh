@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { FiX, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { FiX } from "react-icons/fi";
 import { dosenAPI } from "../../../services/dosenAPI";
 import { supabase } from "../../../supabaseClient";
-import Loading from "../../../components/admin/Loading";
 import { dashboardAPI } from "../../../services/dashboardAdminAPI";
 
 const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) => {
@@ -16,16 +15,6 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
-  const [notifikasi, setNotifikasi] = useState({ status: false, tipe: "sukses", pesan: "" });
-
-  useEffect(() => {
-    if (notifikasi.status) {
-      const timer = setTimeout(() => {
-        setNotifikasi({ status: false, tipe: "sukses", pesan: "" });
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [notifikasi.status]);
 
   const cekEmailUnik = async (prefix) => {
     if (!prefix) return;
@@ -107,12 +96,6 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
 
       onSuksesSimpan(dataSiapKirim);
       
-      setNotifikasi({
-        status: true,
-        tipe: "sukses",
-        pesan: "Akun login, data user, dan profil dosen baru berhasil dibuat!"
-      });
-
       setInputBaru({
         nidn: "",
         nama: "",
@@ -121,54 +104,27 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
         status: "Aktif",
       });
 
-      setTimeout(() => {
-        setIsTambahTerbuka(false);
-      }, 1500);
+      setIsTambahTerbuka(false);
+      alert("Akun login, data user, dan profil dosen baru berhasil dibuat!");
 
     } catch (error) {
       console.error(error);
-      setNotifikasi({
-        status: true,
-        tipe: "gagal",
-        pesan: error.message || "Gagal memproses pendaftaran dosen."
-      });
+      alert("Gagal: " + (error.message || "Gagal memproses pendaftaran dosen."));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const tutupModal = () => {
+    setIsSubmitting(false);
+    setIsTambahTerbuka(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-white z-[9999] p-6 md:p-12 text-gray-600 overflow-y-auto min-h-screen font-sans">
-      {notifikasi.status && (
-        <div className="fixed inset-0 flex items-center justify-center z-[100000] p-4 bg-slate-900/10 backdrop-blur-xs">
-          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-xl border shadow-2xl max-w-sm w-full animate-scaleIn ${
-            notifikasi.tipe === "sukses" 
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
-              : "bg-rose-50 border-rose-200 text-rose-800"
-          }`}>
-            {notifikasi.tipe === "sukses" ? (
-              <FiCheckCircle className="text-emerald-500 text-xl shrink-0" />
-            ) : (
-              <FiAlertCircle className="text-rose-500 text-xl shrink-0" />
-            )}
-            <div className="flex flex-col gap-0.5 flex-1">
-              <span className="font-bold text-xs uppercase tracking-wide">
-                {notifikasi.tipe === "sukses" ? "Berhasil" : "Sistem Eror"}
-              </span>
-              <p className="text-[11.5px] font-medium leading-relaxed">{notifikasi.pesan}</p>
-            </div>
-            <button 
-              type="button" 
-              onClick={() => setNotifikasi({ ...notifikasi, status: false })}
-              className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600 self-start"
-            >
-              <FiX size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
       <form onSubmit={tanganiSimpanDosen} className="max-w-4xl mx-auto w-full text-xs">
+        
+        {/* Header Bagian Atas */}
         <div className="flex justify-between items-center border-b border-gray-200 pb-5 mb-8">
           <div>
             <h3 className="text-base font-bold text-gray-800">Formulir Tambah Dosen</h3>
@@ -177,14 +133,16 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
           <button 
             type="button" 
             disabled={isSubmitting}
-            onClick={() => setIsTambahTerbuka(false)} 
-            className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-50 border border-gray-200 flex items-center gap-2 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+            onClick={tutupModal} 
+            className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-50 border border-gray-200 flex items-center gap-2 text-xs font-bold transition cursor-pointer disabled:opacity-50"
           >
             <FiX size={15} /> Tutup
           </button>
         </div>
 
+        {/* Form Fields Area */}
         <div className="space-y-8">
+          {/* Bagian Identitas */}
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold text-[#1a3a6b] uppercase tracking-wider border-b border-gray-100 pb-2">Identitas Dosen</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -216,6 +174,7 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
             </div>
           </div>
 
+          {/* Bagian Homebase & Status */}
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold text-[#1a3a6b] uppercase tracking-wider border-b border-gray-100 pb-2">Homebase & Status</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -250,6 +209,7 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
             </div>
           </div>
 
+          {/* Bagian Akses Sistem */}
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold text-[#1a3a6b] uppercase tracking-wider border-b border-gray-100 pb-2">Akses Sistem</h4>
             <div className="flex flex-col gap-1.5">
@@ -273,12 +233,13 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
           </div>
         </div>
 
+        {/* Footer Tombol Aksi Bawah */}
         <div className="border-t border-gray-200 pt-8 mt-12 flex justify-end gap-2.5">
           <button 
             type="button" 
             disabled={isSubmitting}
-            onClick={() => setIsTambahTerbuka(false)} 
-            className="bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-semibold px-5 py-2 rounded-lg transition border border-gray-200 cursor-pointer"
+            onClick={tutupModal} 
+            className="bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-bold px-5 py-2 rounded-lg transition border border-gray-200 cursor-pointer"
           >
             Batalkan
           </button>
@@ -289,7 +250,7 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
             style={{ backgroundColor: (isSubmitting || emailError) ? "#9ca3af" : "#1a3a6b" }}
             onMouseEnter={(e) => !(isSubmitting || emailError) && (e.currentTarget.style.backgroundColor = "#244b86")}
             onMouseLeave={(e) => !(isSubmitting || emailError) && (e.currentTarget.style.backgroundColor = "#1a3a6b")}
-            className="text-white text-xs font-semibold px-6 py-2 rounded-lg transition shadow-sm cursor-pointer min-w-[150px]"
+            className="text-white text-xs font-bold px-6 py-2 rounded-lg transition shadow-sm cursor-pointer min-w-[150px]"
           >
             {isSubmitting ? "Menyimpan..." : "Simpan Data Dosen"}
           </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiSearch, FiUser, FiAlertCircle, FiEdit2 } from "react-icons/fi";
+import { FiSearch, FiUser, FiAlertCircle, FiEdit2, FiChevronDown } from "react-icons/fi";
 import { nilaiAPI } from "../../services/nilaiAPI";
 import { jadwalAPI } from "../../services/jadwalAPI";
 import { dosenAPI } from "../../services/dosenAPI";
@@ -12,10 +12,7 @@ export default function Nilai() {
   const [daftarMahasiswa, setDaftarMahasiswa] = useState([]);
   const [jadwalDetail, setJadwalDetail] = useState(null);
   const [barisAktif, setBarisAktif] = useState(null); 
-  
-  // PERBAIKAN DI SINI: Spasi pada nama variabel sudah dihapus
   const [adaPerubahanBaru, setAdaPerubahanBaru] = useState(false);
-
   const [isLocked, setIsLocked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -166,36 +163,62 @@ export default function Nilai() {
   const isTombolKirimDisabled = (!adaPerubahanBaru && jadwalDetail?.status_nilai === "Draft") || isLocked || isLoading;
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full">
+    <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full animate-fadeIn">
 
       {/* 1. KOTAK PENYARINGAN KELAS */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
         <h2 className="text-sm font-bold text-slate-950 mb-4">Pilih Kelas Mengajar</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Mata Kuliah Diampu</label>
-            <select
-              value={idJadwalTerpilih}
-              onChange={(e) => {
-                const targetId = e.target.value;
-                setIdJadwalTerpilih(targetId);
-                setJadwalDetail(daftarJadwal.find(j => String(j.id_jadwal) === String(targetId)));
-              }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer focus:outline-none focus:border-slate-400 transition"
-            >
-              {daftarJadwal.map(j => (
-                <option key={j.id_jadwal} value={j.id_jadwal}>{j.mata_kuliah} - Kelas {j.kelas}</option>
-              ))}
-            </select>
+          
+          {/* DROPDOWN MATAKULIAH DAISYUI DENGAN SCROLL VERTIVAL */}
+          <div className="flex flex-col w-full">
+            <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Mata Kuliah Diampu</label>
+            <div className="dropdown dropdown-bottom w-full">
+              <div 
+                tabIndex={0} 
+                role="button" 
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs bg-white text-slate-700 font-bold cursor-pointer flex items-center justify-between gap-2 hover:bg-gray-50/50 transition h-9 select-none"
+              >
+                <span className="truncate">
+                  {daftarJadwal.find(j => String(j.id_jadwal) === String(idJadwalTerpilih)) 
+                    ? `${daftarJadwal.find(j => String(j.id_jadwal) === String(idJadwalTerpilih)).mata_kuliah} - Kelas ${daftarJadwal.find(j => String(j.id_jadwal) === String(idJadwalTerpilih)).kelas}`
+                    : "Pilih Mata Kuliah"}
+                </span>
+                <FiChevronDown className="text-gray-400 shrink-0 text-[10px]" />
+              </div>
+              <ul 
+                tabIndex={0} 
+                className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-full max-h-56 overflow-y-auto flex-col flex-nowrap gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+              >
+                {daftarJadwal.map((j) => (
+                  <li key={j.id_jadwal} className="w-full">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIdJadwalTerpilih(j.id_jadwal);
+                        setJadwalDetail(j);
+                        if (document.activeElement) document.activeElement.blur();
+                      }}
+                      className={`px-2.5 py-1.5 text-[11px] font-bold rounded-md block text-left w-full truncate transition ${
+                        String(idJadwalTerpilih) === String(j.id_jadwal) ? "bg-blue-50 text-blue-700 hover:bg-blue-50" : "hover:bg-gray-100 text-slate-700"
+                      }`}
+                    >
+                      {j.mata_kuliah} - Kelas {j.kelas}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
+
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Periode Rilis</label>
-            <div className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-gray-50 text-slate-500 font-medium min-h-[30px] flex items-center">
+            <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Periode Rilis</label>
+            <div className="w-full h-9 border border-gray-200 bg-slate-50 rounded-lg px-3 text-xs text-slate-500 font-bold flex items-center shadow-inner">
               Genap 2025/2026
             </div>
           </div>
           <div>
-            <button onClick={muatLembarNilaiMahasiswa} className="w-full flex items-center justify-center gap-2 bg-[#1a3a6b] text-white rounded-lg px-4 py-1.5 hover:bg-[#244b86] transition font-bold text-xs shadow-sm cursor-pointer h-[32px]">
+            <button onClick={muatLembarNilaiMahasiswa} className="btn bg-[#1a3a6b] text-white hover:bg-[#244b86] border-none w-full h-9 min-h-0 rounded-lg text-xs font-bold shadow-none tracking-wide cursor-pointer">
               <FiSearch className="text-xs" /> Tampilkan Mahasiswa
             </button>
           </div>
@@ -278,7 +301,7 @@ export default function Nilai() {
                         value={mhs.tugas}
                         disabled={isLocked}
                         onChange={(e) => handleNilaiChange(mhs.id_mahasiswa, "tugas", e.target.value)}
-                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-800 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
+                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-880 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
                       />
                     </td>
                     <td className="px-2 py-1.5 text-center">
@@ -288,7 +311,7 @@ export default function Nilai() {
                         value={mhs.uts}
                         disabled={isLocked}
                         onChange={(e) => handleNilaiChange(mhs.id_mahasiswa, "uts", e.target.value)}
-                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-800 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
+                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-880 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
                       />
                     </td>
                     <td className="px-2 py-1.5 text-center">
@@ -298,7 +321,7 @@ export default function Nilai() {
                         value={mhs.uas}
                         disabled={isLocked}
                         onChange={(e) => handleNilaiChange(mhs.id_mahasiswa, "uas", e.target.value)}
-                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-800 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
+                        className={`w-full text-center border rounded px-2 py-1 focus:outline-none font-bold text-slate-880 bg-white disabled:bg-gray-50 disabled:text-gray-400 ${barisAktif === mhs.id_mahasiswa ? "border-amber-400" : "border-gray-200 focus:border-slate-400"}`}
                       />
                     </td>
                     

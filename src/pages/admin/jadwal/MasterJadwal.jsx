@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiCalendar, FiClock, FiMapPin } from "react-icons/fi";
+import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiCalendar, FiClock, FiMapPin, FiChevronDown } from "react-icons/fi";
 import { jadwalAPI } from "../../../services/jadwalAPI";
 import BuatJadwalBaru from "./TambahJadwal";
 import EditJadwal from "./EditJadwal";
@@ -39,6 +39,7 @@ const MasterJadwal = () => {
         await jadwalAPI.deleteJadwal(id);
         setJadwalTerpilih(jadwalTerpilih.filter(item => item !== id));
         muatData();
+        alert("Jadwal perkuliahan berhasil dihapus!");
       } catch (error) {
         console.error("Error network:", error);
         alert("Gagal menghapus jadwal: Terjadi masalah koneksi ke server.");
@@ -54,6 +55,7 @@ const MasterJadwal = () => {
         }
         setJadwalTerpilih([]);
         muatData();
+        alert("Semua jadwal terpilih berhasil dihapus!");
       } catch (error) {
         console.error("Error network:", error);
         alert("Beberapa jadwal gagal dihapus akibat gangguan koneksi server.");
@@ -77,7 +79,7 @@ const MasterJadwal = () => {
   });
 
   return (
-    <div className="flex flex-col gap-5 p-6 bg-gray-50/50 min-h-screen font-sans relative">
+    <div className="p-4 md:p-6 flex flex-col gap-5 bg-slate-50/50 min-h-screen animate-fadeIn font-sans relative">
       
       {/* 1. FILTER BAR */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col md:flex-row gap-3 justify-between items-center">
@@ -94,22 +96,55 @@ const MasterJadwal = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto justify-end">
-          <select
-            value={filterProdi}
-            onChange={(e) => setFilterProdi(e.target.value)}
-            className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer max-w-xs truncate focus:outline-none"
-          >
-            <option value="Semua Program Studi">Semua Program Studi</option>
-            <option value="D4 Pengolahan dan Penyimpanan Hasil Perikanan">D4 Pengolahan Hasil Perikanan (PPHP)</option>
-            <option value="D3 Perikanan Tangkap">D3 Perikanan Tangkap (PTK)</option>
-            <option value="D3 Budi Daya Ikan">D3 Budi Daya Ikan (BDI)</option>
-          </select>
+          
+          {/* DROPDOWN FILTER PROGRAM STUDI (DAISYUI) */}
+          <div className="dropdown dropdown-bottom w-full sm:w-auto">
+            <div 
+              tabIndex={0} 
+              role="button" 
+              className="w-full sm:w-64 border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white text-slate-700 font-medium cursor-pointer flex items-center justify-between gap-2 hover:bg-gray-50/50 transition select-none"
+            >
+              <span className="truncate">
+                {filterProdi === "D4 Pengolahan dan Penyimpanan Hasil Perikanan" && "D4 Pengolahan Hasil Perikanan (PPHP)"}
+                {filterProdi === "D3 Perikanan Tangkap" && "D3 Perikanan Tangkap (PTK)"}
+                {filterProdi === "D3 Budi Daya Ikan" && "D3 Budi Daya Ikan (BDI)"}
+                {filterProdi === "Semua Program Studi" && "Semua Program Studi"}
+              </span>
+              <FiChevronDown className="text-gray-400 shrink-0 text-[10px]" />
+            </div>
+            <ul 
+              tabIndex={0} 
+              className="dropdown-content menu p-1.5 shadow-lg bg-white rounded-lg border border-gray-200/80 w-full sm:w-64 gap-0.5 z-[100] mt-1 text-slate-700 font-sans"
+            >
+              {[
+                { value: "Semua Program Studi", label: "Semua Program Studi" },
+                { value: "D4 Pengolahan dan Penyimpanan Hasil Perikanan", label: "D4 Pengolahan Hasil Perikanan (PPHP)" },
+                { value: "D3 Perikanan Tangkap", label: "D3 Perikanan Tangkap (PTK)" },
+                { value: "D3 Budi Daya Ikan", label: "D3 Budi Daya Ikan (BDI)" }
+              ].map((prodi) => (
+                <li key={prodi.value}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterProdi(prodi.value);
+                      if (document.activeElement) document.activeElement.blur();
+                    }}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-md block text-left w-full transition ${
+                      filterProdi === prodi.value ? "bg-blue-50 text-blue-700 hover:bg-blue-50" : "hover:bg-gray-100 text-slate-700"
+                    }`}
+                  >
+                    {prodi.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           {jadwalTerpilih.length > 0 && (
             <button 
               type="button"
               onClick={tanganiHapusBanyak} 
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600 text-white rounded-lg px-4 py-1.5 hover:bg-red-700 transition font-medium text-xs shadow-sm cursor-pointer shrink-0"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600 text-white rounded-lg px-4 py-1.5 hover:bg-red-700 transition font-bold text-xs shadow-sm cursor-pointer shrink-0"
             >
               <FiTrash2 size={13} /> 
               <span>Hapus ({jadwalTerpilih.length})</span>
@@ -119,7 +154,7 @@ const MasterJadwal = () => {
           <button 
             type="button"
             onClick={() => setIsModalTerbuka(true)} 
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#1a3a6b] text-white rounded-lg px-4 py-1.5 hover:bg-[#244b86] transition font-medium text-xs shadow-sm cursor-pointer shrink-0 whitespace-nowrap"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#1a3a6b] text-white rounded-lg px-4 py-1.5 hover:bg-[#244b86] transition font-bold text-xs shadow-sm cursor-pointer shrink-0 whitespace-nowrap"
           >
             <FiPlus size={13} /> 
             <span>Buat Jadwal</span>
@@ -135,8 +170,8 @@ const MasterJadwal = () => {
       )}
 
       {isLoading ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center text-xs font-medium text-gray-400 shadow-sm">
-          Memuat basis data jadwal perkuliahan...
+        <div className="bg-white border border-gray-200 rounded-xl p-12 flex justify-center items-center shadow-sm">
+          <Loading />
         </div>
       ) : jadwalTerfilter.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-xl p-12 text-center text-xs font-medium text-gray-400 shadow-sm">
@@ -184,14 +219,14 @@ const MasterJadwal = () => {
                 <button 
                   type="button"
                   onClick={() => { setJadwalEdit(jdl); setIsEditTerbuka(true); }} 
-                  className="flex-1 text-[11px] bg-slate-50 text-slate-600 font-semibold py-1.5 rounded-lg hover:bg-gray-100 border border-gray-200 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 text-[11px] bg-slate-50 text-slate-600 font-bold py-1.5 rounded-lg hover:bg-gray-100 border border-gray-200 transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <FiEdit2 size={12} className="text-gray-400" /> <span>Edit</span>
                 </button>
                 <button 
                   type="button"
                   onClick={() => tanganiHapusSatu(jdl.id_jadwal)} 
-                  className="flex-1 text-[11px] bg-red-50 text-red-600 font-semibold py-1.5 rounded-lg hover:bg-red-100/70 border border-red-100 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 text-[11px] bg-red-50 text-red-600 font-bold py-1.5 rounded-lg hover:bg-red-100/70 border border-red-100 transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <FiTrash2 size={12} className="text-red-400" /> <span>Hapus</span>
                 </button>
@@ -202,8 +237,8 @@ const MasterJadwal = () => {
       )}
 
       {/* OVERLAY MODALS */}
-      <BuatJadwalBaru isModalTerbuka={isModalTerbuka} setIsModalTerbuka={setIsModalTerbuka} onSuksesSimpan={muatData} />
-      <EditJadwal isEditTerbuka={isEditTerbuka} setIsEditTerbuka={setIsEditTerbuka} dataEdit={jadwalEdit} onSuksesEdit={muatData} />
+      <BuatJadwalBaru isModalTerbuka={isModalTerbuka} setIsModalTerbuka={setIsModalTerbuka} onSuksesSimpan={() => { muatData(); alert("Jadwal perkuliahan baru berhasil ditambahkan!"); }} />
+      <EditJadwal isEditTerbuka={isEditTerbuka} setIsEditTerbuka={setIsEditTerbuka} dataEdit={jadwalEdit} onSuksesEdit={() => { muatData(); alert("Perubahan data jadwal berhasil diperbarui!"); }} />
     </div>
   );
 };

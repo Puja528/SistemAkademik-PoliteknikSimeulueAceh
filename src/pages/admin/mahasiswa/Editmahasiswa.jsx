@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { mahasiswaAPI } from "../../../services/mahasiswaAPI.js"; 
 import { supabase } from "../../../supabaseClient";
-import Loading from "../../../components/admin/Loading";
 
 const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit }) => {
   const [inputEdit, setInputEdit] = useState({
@@ -19,16 +18,26 @@ const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSukses
   const [daftarKelas, setDaftarKelas] = useState([]);
   
   const tahunSekarang = new Date().getFullYear();
-  const daftarAngkatan = [tahunSekarang.toString(), (tahunSekarang + 1).toString()];
+  
+  // Membuat daftar angkatan dinamis (5 tahun ke belakang hingga tahun sekarang)
+  const daftarAngkatan = Array.from({ length: 6 }, (_, i) => (tahunSekarang - i).toString());
 
   useEffect(() => {
     const fetchKelas = async () => {
-      const { data } = await supabase.from("kelas").select("id, nama_kelas");
-      setDaftarKelas(data || []);
+      try {
+        const { data, error } = await supabase.from("kelas").select("id, nama_kelas");
+        if (error) throw error;
+        setDaftarKelas(data || []);
+      } catch (error) {
+        console.error("Error fetching kelas:", error);
+      }
     };
-    fetchKelas();
+    
+    if (isEditTerbuka) {
+      fetchKelas();
+    }
 
-    if (dataTerpilih) {
+    if (dataTerpilih && isEditTerbuka) {
       const emailPrefix = dataTerpilih.email ? dataTerpilih.email.split('@')[0] : "";
       
       setInputEdit({
@@ -55,7 +64,7 @@ const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSukses
       nama: inputEdit.nama.trim(),
       program_studi: inputEdit.program_studi,
       email: emailLengkap,
-      id_kelas: parseInt(inputEdit.id),
+      id_kelas: inputEdit.id ? parseInt(inputEdit.id) : null,
       angkatan: parseInt(inputEdit.angkatan),
       status: inputEdit.status
     };
@@ -74,6 +83,11 @@ const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSukses
     }
   };
 
+  const tutupModal = () => {
+    setIsSubmitting(false);
+    setIsEditTerbuka(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-white z-[9999] p-6 md:p-12 text-gray-600 overflow-y-auto min-h-screen font-sans">
       <form onSubmit={tanganiUbahMahasiswa} className="max-w-4xl mx-auto w-full text-xs">
@@ -89,7 +103,7 @@ const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSukses
           <button 
             type="button" 
             disabled={isSubmitting}
-            onClick={() => setIsEditTerbuka(false)} 
+            onClick={tutupModal} 
             className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-50 border border-gray-200 flex items-center gap-2 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
           >
             <FiX size={15} /> Tutup
@@ -125,7 +139,7 @@ const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSukses
             </div>
           </div>
 
-          {/* Kelompok Form: Data Academic */}
+          {/* Kelompok Form: Data Akademik */}
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold text-[#1a3a6b] uppercase tracking-wider border-b border-gray-100 pb-2">Data Akademik</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -219,7 +233,7 @@ const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSukses
           <button 
             type="button" 
             disabled={isSubmitting}
-            onClick={() => setIsEditTerbuka(false)} 
+            onClick={tutupModal} 
             className="bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-semibold px-5 py-2 rounded-lg transition border border-gray-200 cursor-pointer"
           >
             Batalkan

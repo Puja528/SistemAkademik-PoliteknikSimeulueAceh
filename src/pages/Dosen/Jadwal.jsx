@@ -131,9 +131,10 @@ export default function Jadwal() {
           </h4>
         </div>
         <div className="flex sm:justify-end gap-2">
+          {/* Menggunakan DaisyUI: btn btn-outline btn-xs */}
           <button
             onClick={() => setViewMode(viewMode === "all" ? "today" : "all")}
-            className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 transition cursor-pointer"
+            className="btn btn-outline btn-xs text-white border-white/20 hover:bg-white/10 hover:text-white rounded-lg px-3 py-1.5 font-bold tracking-wide h-auto min-h-0"
           >
             {viewMode === "all" ? (
               <FiList className="text-xs" />
@@ -239,7 +240,7 @@ export default function Jadwal() {
                 ))}
               </div>
               
-              {/* Grid Utama (Solusi 2: Tinggi diubah menjadi 540px agar render posisi absolut presisi) */}
+              {/* Grid Utama */}
               <div className="grid grid-cols-6 gap-3 relative" style={{ height: "540px" }}>
                 
                 {/* Kolom Indikator Waktu Samping */}
@@ -287,7 +288,7 @@ export default function Jadwal() {
                       const desimalMulai = hMulai + (mMulai / 60);
                       const desimalSelesai = hSelesai + (mSelesai / 60);
 
-                      // Kalkulasi posisi top & tinggi (08:00 - 17:00 = 9 jam total operasional)
+                      // Kalkulasi posisi top & tinggi
                       const totalJamOperasional = 9; 
                       const topPercent = ((desimalMulai - 8) / totalJamOperasional) * 100;
                       const heightPercent = ((desimalSelesai - desimalMulai) / totalJamOperasional) * 100;
