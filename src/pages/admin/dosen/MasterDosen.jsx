@@ -4,6 +4,7 @@ import { dosenAPI } from "../../../services/dosenAPI";
 import TambahDosen from "./TambahDosen";
 import EditDosen from "./EditDosen"; 
 import Loading from "../../../components/admin/Loading";
+import { dashboardAPI } from "../../../services/dashboardAdminAPI";
 
 const MasterDosen = () => {
   const [dataDosen, setDataDosen] = useState([]);
@@ -18,6 +19,11 @@ const MasterDosen = () => {
   const [dataTerpilih, setDataTerpilih] = useState(null);   
   const [isEditTerbuka, setIsEditTerbuka] = useState(false);
   const [isHapusTerbuka, setIsHapusTerbuka] = useState(false);
+
+  const getAdminName = () => {
+    const localSession = JSON.parse(localStorage.getItem("siakad_session"));
+    return localSession?.nama || "staff";
+  };
 
   const muatDataDosenDariDatabase = async () => {
     try {
@@ -48,14 +54,20 @@ const MasterDosen = () => {
   const tanganiHapusDosenLokal = async () => {
     if (!dataTerpilih) return;
     try {
-      await dosenAPI.deleteDosen(dataTerpilih.nidn);
+        await dashboardAPI.logAktivitas(
+          "Master Dosen", 
+          `Menghapus data dosen: ${dataTerpilih.nama} (NIDN: ${dataTerpilih.nidn})`, 
+          "DELETE", 
+          getAdminName()
+        );
+      } catch (logErr) {
+        console.error("Gagal mencatat log aktivitas:", logErr); // Mencegah app crash jika log gagal
+      }
+
       setIsHapusTerbuka(false);
       setDataTerpilih(null);
       muatDataDosenDariDatabase();
-    } catch (error) {
-      console.error("Error deleting data:", error);
-      alert(error.message || "Gagal menghapus data dosen di server.");
-    }
+
   };
 
   const dosenTerfilter = dataDosen.filter((dsn) => {
@@ -250,7 +262,7 @@ const MasterDosen = () => {
               </button>
               <button 
                 type="button" 
-                onClick={tanganiHosenLokal} 
+                onClick={tanganiHapusDosenLokal} 
                 className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-2 rounded-lg transition shadow-sm cursor-pointer"
               >
                 Ya, Hapus Data

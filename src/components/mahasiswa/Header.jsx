@@ -111,7 +111,7 @@ export default function Header({ toggleSidebar }) {
               {namaUserReal}
             </p>
             <p className="text-[9px] text-slate-400 uppercase font-medium tracking-wider m-0">
-              Computer Sciences Student
+             
             </p>
           </div>
         </Link>

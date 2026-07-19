@@ -19,6 +19,7 @@ export const dashboardAPI = {
             totalSchedules: resJadwal.data[0].count
         };
     },
+    
     async logAktivitas(judul, detail, tipe, userName) {
         await axios.post(`https://${PROJECT_ID}.supabase.co/rest/v1/aktivitas`, {
             judul, detail, tipe, user_name: userName

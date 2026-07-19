@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { FiX } from "react-icons/fi";
+import { FiX, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import { dosenAPI } from "../../../services/dosenAPI";
+import { dashboardAPI } from "../../../services/dashboardAdminAPI";
 import Loading from "../../../components/admin/Loading";
 
 const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit }) => {
@@ -13,6 +14,7 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notifikasi, setNotifikasi] = useState({ status: false, tipe: "sukses", pesan: "" });
 
   useEffect(() => {
     if (dataTerpilih) {
@@ -25,6 +27,15 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
       });
     }
   }, [dataTerpilih, isEditTerbuka]);
+
+  useEffect(() => {
+    if (notifikasi.status) {
+      const timer = setTimeout(() => {
+        setNotifikasi({ status: false, tipe: "sukses", pesan: "" });
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notifikasi.status]);
 
   if (!isEditTerbuka) return null;
 
@@ -41,12 +52,38 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
 
     try {
       await dosenAPI.updateDosen(inputEdit.nidn, dataSiapUpdate);
+      
+      try {
+        const adminSession = JSON.parse(localStorage.getItem("siakad_session"));
+        await dashboardAPI.logAktivitas(
+          "Master Dosen",
+          `Mengubah informasi data dosen: ${inputEdit.nama.trim()} (NIDN: ${inputEdit.nidn})`,
+          "UPDATE",
+          adminSession?.nama || "Staff Administrasi"
+        );
+      } catch (logErr) {
+        console.error(logErr);
+      }
+
       onSuksesEdit({ nidn: inputEdit.nidn, ...dataSiapUpdate });
-      setIsEditTerbuka(false);
-      alert("Perubahan data dosen berhasil disimpan!");
+      
+      setNotifikasi({
+        status: true,
+        tipe: "sukses",
+        pesan: "Perubahan data dosen berhasil disimpan!"
+      });
+
+      setTimeout(() => {
+        setIsEditTerbuka(false);
+      }, 1500);
+
     } catch (error) {
       console.error(error);
-      alert(error.message || "Gagal memperbarui data dosen.");
+      setNotifikasi({
+        status: true,
+        tipe: "gagal",
+        pesan: error.message || "Gagal memperbarui data dosen."
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -54,9 +91,36 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
 
   return (
     <div className="fixed inset-0 bg-white z-[9999] p-6 md:p-12 text-gray-600 overflow-y-auto min-h-screen font-sans">
+      {notifikasi.status && (
+        <div className="fixed inset-0 flex items-center justify-center z-[100000] p-4 bg-slate-900/10 backdrop-blur-xs">
+          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-xl border shadow-2xl max-w-sm w-full animate-scaleIn ${
+            notifikasi.tipe === "sukses" 
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+              : "bg-rose-50 border-rose-200 text-rose-800"
+          }`}>
+            {notifikasi.tipe === "sukses" ? (
+              <FiCheckCircle className="text-emerald-500 text-xl shrink-0" />
+            ) : (
+              <FiAlertCircle className="text-rose-500 text-xl shrink-0" />
+            )}
+            <div className="flex flex-col gap-0.5 flex-1">
+              <span className="font-bold text-xs uppercase tracking-wide">
+                {notifikasi.tipe === "sukses" ? "Berhasil" : "Sistem Eror"}
+              </span>
+              <p className="text-[11.5px] font-medium leading-relaxed">{notifikasi.pesan}</p>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setNotifikasi({ ...notifikasi, status: false })}
+              className="p-1 rounded-md hover:bg-black/5 text-gray-400 hover:text-gray-600 self-start"
+            >
+              <FiX size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={tanganiUbahDosen} className="max-w-4xl mx-auto w-full text-xs">
-        
-        {/* Header Section */}
         <div className="flex justify-between items-center border-b border-gray-200 pb-5 mb-8">
           <div>
             <h3 className="text-base font-bold text-gray-800">Perbarui Data Dosen</h3>
@@ -75,7 +139,6 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
         </div>
 
         <div className="space-y-8">
-          {/* Kelompok Form: Identitas Dosen */}
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold text-[#1a3a6b] uppercase tracking-wider border-b border-gray-100 pb-2">Identitas Dosen</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -103,7 +166,6 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
             </div>
           </div>
 
-          {/* Kelompok Form: Homebase & Status */}
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold text-[#1a3a6b] uppercase tracking-wider border-b border-gray-100 pb-2">Homebase & Status</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -138,7 +200,6 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
             </div>
           </div>
 
-          {/* Kelompok Form: Akses Sistem */}
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold text-[#1a3a6b] uppercase tracking-wider border-b border-gray-100 pb-2">Akses Sistem</h4>
             <div className="grid grid-cols-1 gap-6">
@@ -158,7 +219,6 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
           </div>
         </div>
 
-        {/* Footer Tombol Aksi */}
         <div className="border-t border-gray-200 pt-8 mt-12 flex justify-end gap-2.5">
           <button 
             type="button" 

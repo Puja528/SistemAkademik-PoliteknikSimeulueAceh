@@ -16,7 +16,7 @@ const PublikasiNilai = lazy(() => import("./pages/admin/nilai/PublikasiNilai"));
 const AdminProfil = lazy(() => import ("./pages/admin/Profil"));
 
 //mahasiswa
-const Login = lazy(() => import("./pages/auth/Login"));
+const Login = React.lazy(() => import("./pages/auth/Login"));
 const DashboardUtama = lazy(() => import("./pages/mahasiswa/DashboardUtama"));
 const KHS = lazy(() => import("./pages/mahasiswa/KHS"));
 const Profil = lazy(() => import("./pages/mahasiswa/Profil"));

@@ -15,7 +15,7 @@ export default function Sidebar({
   const daftarMenu = [
     { name: "Dashboard Utama", path: "/mahasiswa", icon: <FiGrid size={17} /> },
     { name: "Presensi", path: "/mahasiswa/presensi", icon: <FiCheckSquare size={17} /> },
-    { name: "Kartu Hasil Studi (KHS)", path: "/mahasiswa/khs", icon: <FiFileText size={17} /> },
+    { name: "Kartu Hasil Studi", path: "/mahasiswa/khs", icon: <FiFileText size={17} /> },
     { name: "Transkrip Nilai", path: "/mahasiswa/transkrip", icon: <FiAward size={17} /> }
   ];
 
