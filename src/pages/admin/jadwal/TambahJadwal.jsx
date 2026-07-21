@@ -4,6 +4,7 @@ import { jadwalAPI } from "../../../services/jadwalAPI";
 import { dosenAPI } from "../../../services/dosenAPI";
 import axios from "axios";
 import Loading from "../../../components/admin/Loading";
+import Swal from 'sweetalert2';
 
 const TambahJadwal = ({ isModalTerbuka, setIsModalTerbuka, onSuksesSimpan }) => {
   const [form, setForm] = useState({
@@ -70,14 +71,27 @@ const TambahJadwal = ({ isModalTerbuka, setIsModalTerbuka, onSuksesSimpan }) => 
         jamMulai: "08:00", jamSelesai: "", ruangan: "Lab Pengolahan Modern", 
         kelas: "", id_kelas: "", sks: 2, semester: 1
       });
-      alert("Jadwal perkuliahan baru berhasil ditambahkan!");
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Jadwal perkuliahan baru berhasil ditambahkan!',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
     } catch (err) { 
-      alert("Gagal menyimpan jadwal"); 
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Simpan',
+        text: 'Gagal menyimpan jadwal',
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     } finally { 
       setIsSubmitting(false); 
     }
   };
-
+  
   if (!isModalTerbuka) return null;
 
   return (

@@ -17,12 +17,10 @@ export default function Transkrip() {
         const profil = await mahasiswaAPI.fetchMahasiswaByUserId(session.id);
         const nilaiData = await nilaiAPI.fetchKHSMahasiswa(profil.id_mahasiswa);
         
-        // === PERBAIKAN 1: Filter data ganda (Duplikasi) berdasarkan id_jadwal terbaru ===
         const nilaiTerfilter = [];
         const checkedJadwalIds = new Set();
 
         if (nilaiData && Array.isArray(nilaiData)) {
-          // Lakukan perulangan terbalik agar mendapatkan data perubahan terakhir
           [...nilaiData].reverse().forEach((item) => {
             if (item.id_jadwal && !checkedJadwalIds.has(item.id_jadwal)) {
               checkedJadwalIds.add(item.id_jadwal);
@@ -31,7 +29,6 @@ export default function Transkrip() {
           });
         }
 
-        // Urutkan nilai berdasarkan semester terkecil (S-1, S-2, dst) secara kronologis
         const nilaiTerurut = nilaiTerfilter.sort((a, b) => (a.jadwal?.semester || 0) - (b.jadwal?.semester || 0));
         
         setDataAkademik({ profil, nilai: nilaiTerurut });
@@ -44,7 +41,6 @@ export default function Transkrip() {
     muatData();
   }, []);
 
-  // === PERBAIKAN 2: Fungsi Bantu Hitung Bobot Mutu (Skala 4.00) ===
   const hitungBobotGrade = (grade) => {
     if (!grade) return 0;
     const g = grade.toUpperCase().trim();
@@ -111,7 +107,7 @@ export default function Transkrip() {
 
       {/* Area Tabel Transkrip */}
       <div className="space-y-3">
-        <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wide">🎓 Rekapitulasi Historis Seluruh Mata Kuliah</h3>
+        <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wide">Rekapitulasi Historis Seluruh Mata Kuliah</h3>
         
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">

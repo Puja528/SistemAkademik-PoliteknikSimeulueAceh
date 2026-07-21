@@ -12,10 +12,10 @@ import { dosenAPI } from "../../services/dosenAPI";
 import { absensiAPI } from "../../services/absensiAPI";
 import axios from "axios";
 import Loading from "../../components/admin/Loading";
+import Swal from 'sweetalert2';
 
 const TOTAL_PERTEMUAN = 16;
 
-// Helper: "Pertemuan 3" -> 3
 const getNomorPertemuan = (label) =>
   parseInt(String(label).replace(/[^0-9]/g, ""), 10);
 
@@ -23,19 +23,13 @@ export default function Absensi() {
   const [daftarJadwal, setDaftarJadwal] = useState([]);
   const [idJadwalTerpilih, setIdJadwalTerpilih] = useState("");
   const [jadwalDetail, setJadwalDetail] = useState(null);
-
   const [daftarMahasiswa, setDaftarMahasiswa] = useState([]);
   const [filterPertemuan, setFilterPertemuan] = useState("Pertemuan 1");
   const [isLoading, setIsLoading] = useState(false);
-
-  // Daftar nomor pertemuan yang SUDAH punya data absensi tersimpan
-  // untuk mata kuliah (id_jadwal) yang sedang dipilih. Dipakai untuk
-  // mengunci opsi "Pertemuan Ke-" agar tidak bisa diisi ulang.
   const [pertemuanTerisi, setPertemuanTerisi] = useState([]);
   const [isCekPertemuan, setIsCekPertemuan] = useState(false);
 
   useEffect(() => {
-    // Flag untuk mencegah setState pada komponen yang sudah unmount
     let didCancel = false;
 
     const muatJadwalAbsen = async () => {
@@ -51,8 +45,6 @@ export default function Absensi() {
         const semuaJadwal = await jadwalAPI.fetchJadwal();
         if (didCancel) return;
 
-        // Samakan tipe data id_jadwal jadi Number agar konsisten dengan
-        // parseInt() yang dipakai saat dropdown mata kuliah diganti manual
         const jadwalSaya = semuaJadwal
           .filter((j) => j.nidn_dosen === dosenReal.nidn)
           .map((j) => ({ ...j, id_jadwal: Number(j.id_jadwal) }));
@@ -77,10 +69,6 @@ export default function Absensi() {
     };
   }, []);
 
-  // Mengecek pertemuan mana saja (1..16) yang sudah punya data absensi
-  // tersimpan untuk id_jadwal tertentu. Dipanggil setiap kali mata kuliah
-  // berganti, dan setelah simpan, supaya status kunci selalu akurat
-  // (termasuk saat halaman di-refresh).
   const cekPertemuanTerisi = useCallback(async (idJadwal) => {
     if (!idJadwal) return;
     setIsCekPertemuan(true);
@@ -133,7 +121,6 @@ export default function Absensi() {
 
       const masterMhs = resMhs.data || [];
 
-      // === PERBAIKAN: Mengurutkan nama mahasiswa dari A sampai Z ===
       masterMhs.sort((a, b) => {
         const namaA = (a.nama || "").toUpperCase();
         const namaB = (b.nama || "").toUpperCase();
@@ -170,16 +157,13 @@ export default function Absensi() {
       muatDaftarHadirMahasiswa();
       cekPertemuanTerisi(idJadwalTerpilih);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idJadwalTerpilih]);
 
-  // Status pertemuan yang sedang ditampilkan: terkunci kalau sudah ada
-  // di daftar pertemuanTerisi (sudah pernah disimpan sebelumnya).
   const nomorPertemuanAktif = getNomorPertemuan(filterPertemuan);
   const pertemuanAktifTerkunci = pertemuanTerisi.includes(nomorPertemuanAktif);
 
   const handleStatusChange = (idMhs, statusBaru) => {
-    if (pertemuanAktifTerkunci) return; // jaga-jaga, tidak boleh ubah data yang terkunci
+    if (pertemuanAktifTerkunci) return; 
     const updated = daftarMahasiswa.map((mhs) => {
       if (mhs.id_mahasiswa === idMhs) {
         const kehadiranBaru = statusBaru === "Hadir" ? "100%" : "0%";
@@ -213,27 +197,35 @@ export default function Absensi() {
 
       await absensiAPI.simpanAbsensiKelas(payloadAbsen);
 
-      // Tandai pertemuan ini sebagai terisi/terkunci secara optimistik...
       const nomorSelesai = nomorPertemuanAktif;
       setPertemuanTerisi((prev) =>
         prev.includes(nomorSelesai) ? prev : [...prev, nomorSelesai],
       );
 
-      // ...lalu otomatis lanjut ke pertemuan berikutnya (kalau masih ada).
       if (nomorSelesai < TOTAL_PERTEMUAN) {
         setFilterPertemuan(`Pertemuan ${nomorSelesai + 1}`);
-        setDaftarMahasiswa([]); // kosongkan dulu, akan terisi ulang saat "Tampilkan" pertemuan baru
-        alert(
-          `Absensi ${filterPertemuan} berhasil disimpan. Lanjut ke Pertemuan ${nomorSelesai + 1}.`,
-        );
+        setDaftarMahasiswa([]); 
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Berhasil!',
+          text: `Absensi ${filterPertemuan} berhasil disimpan. Lanjut ke Pertemuan ${nomorSelesai + 1}.`,
+          confirmButtonText: 'Lanjut',
+          confirmButtonColor: '#3085d6',
+        });
+
       } else {
-        alert(
-          "Data lembar absensi berkas mahasiswa berhasil diunggah! Semua pertemuan sudah terisi.",
-        );
+        
+        await Swal.fire({
+          icon: 'success',
+          title: 'Semua Pertemuan Selesai!',
+          text: 'Data lembar absensi berkas mahasiswa berhasil diunggah! Semua pertemuan sudah terisi.',
+          confirmButtonText: 'Selesai',
+          confirmButtonColor: '#3085d6',
+        });
+
       }
 
-      // Sinkronkan ulang status kunci dari server untuk memastikan akurat
-      // (misal ada input dari perangkat/tab lain).
       cekPertemuanTerisi(idJadwalTerpilih);
     } catch (error) {
       alert("Gagal mengunggah absensi: " + error.message);
@@ -268,7 +260,6 @@ export default function Absensi() {
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-[#f4f6f9] min-h-screen font-sans text-xs text-slate-700 w-full">
-      {/* 1. SEKSI FORM SELEKSI MATA KULIAH */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
         <h2 className="text-sm font-bold text-slate-950 mb-4">
           Pilih Mata Kuliah & Pertemuan
@@ -355,7 +346,6 @@ export default function Absensi() {
         </div>
       </div>
 
-      {/* 2. AREA DETAIL JADWAL YANG TERPILIH (GRADIENT STYLE) */}
       {jadwalDetail && (
         <div
           className="text-white rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 shadow-sm"

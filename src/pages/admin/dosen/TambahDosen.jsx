@@ -3,6 +3,7 @@ import { FiX } from "react-icons/fi";
 import { dosenAPI } from "../../../services/dosenAPI";
 import { supabase } from "../../../supabaseClient";
 import { dashboardAPI } from "../../../services/dashboardAdminAPI";
+import Swal from 'sweetalert2';
 
 const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) => {
   const [inputBaru, setInputBaru] = useState({
@@ -94,7 +95,7 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
         console.error("Gagal mencatat log aktivitas:", logErr);
       }
 
-      onSuksesSimpan(dataSiapKirim);
+onSuksesSimpan(dataSiapKirim);
       
       setInputBaru({
         nidn: "",
@@ -105,11 +106,28 @@ const TambahDosen = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) =>
       });
 
       setIsTambahTerbuka(false);
-      alert("Akun login, data user, dan profil dosen baru berhasil dibuat!");
+      
+      // Notifikasi Sukses dengan SweetAlert2
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Akun login, data user, dan profil dosen baru berhasil dibuat!',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
 
     } catch (error) {
       console.error(error);
-      alert("Gagal: " + (error.message || "Gagal memproses pendaftaran dosen."));
+      
+      // Notifikasi Gagal dengan SweetAlert2
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Simpan',
+        text: error.message || 'Gagal memproses pendaftaran dosen.',
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
+
     } finally {
       setIsSubmitting(false);
     }

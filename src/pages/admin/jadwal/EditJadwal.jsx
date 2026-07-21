@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { jadwalAPI } from "../../../services/jadwalAPI";
 import Loading from "../../../components/admin/Loading";
+import Swal from 'sweetalert2';
 
 const EditJadwal = ({ isEditTerbuka, setIsEditTerbuka, dataEdit, onSuksesEdit }) => {
   const [form, setForm] = useState({});
@@ -18,11 +19,26 @@ const EditJadwal = ({ isEditTerbuka, setIsEditTerbuka, dataEdit, onSuksesEdit })
     setIsSubmitting(true);
     try {
       await jadwalAPI.updateJadwal(form.id_jadwal, form);
-      onSuksesEdit();
       setIsEditTerbuka(false);
-      alert("Perubahan jadwal kuliah berhasil disimpan!");
+      
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Perubahan jadwal kuliah berhasil disimpan!',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+
+      if (onSuksesEdit) onSuksesEdit();
+
     } catch (err) { 
-      alert("Gagal memperbarui jadwal"); 
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Simpan',
+        text: 'Gagal memperbarui jadwal',
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     } finally { 
       setIsSubmitting(false); 
     }

@@ -4,6 +4,7 @@ import { AiOutlineEye, AiOutlineCheckCircle, AiOutlineClockCircle } from "react-
 import { nilaiAPI } from "../../../services/nilaiAPI";
 import LihatNilai from "./LihatNilai"; 
 import Loading from "../../../components/admin/Loading";
+import Swal from 'sweetalert2';
 
 const PublikasiNilai = () => {
   const [dataPublikasi, setDataPublikasi] = useState([]);
@@ -34,14 +35,39 @@ const PublikasiNilai = () => {
   }, []);
 
   const tanganiPublikasi = async (idJadwal) => {
-    if (window.confirm("Apakah kamu yakin ingin mempublikasikan nilai ini ke mahasiswa?")) {
-      try {
-        await nilaiAPI.publikasikanNilai(parseInt(idJadwal));
-        alert("Nilai berhasil dipublikasikan!");
-        muatDataNilai();
-      } catch (error) {
-        alert("Gagal mempublikasikan nilai: " + error.message);
-      }
+    const hasilKonfirmasi = await Swal.fire({
+      title: 'Apakah Anda yakin?',
+      text: 'Nilai ini akan dipublikasikan dan dapat dilihat oleh mahasiswa!',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Publikasikan!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!hasilKonfirmasi.isConfirmed) return;
+
+    try {
+      await nilaiAPI.publikasikanNilai(parseInt(idJadwal));
+      
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Nilai berhasil dipublikasikan!',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+
+      muatDataNilai();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Publikasi',
+        text: 'Gagal mempublikasikan nilai: ' + error.message,
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     }
   };
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { FiSearch, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiAlertTriangle, FiChevronDown } from "react-icons/fi";
+import { FiSearch, FiPlus, FiMoreHorizontal, FiEdit2, FiTrash2, FiChevronDown } from "react-icons/fi";
 import { mahasiswaAPI } from "../../../services/mahasiswaAPI.js";
 import TambahMahasiswa from "./TambahMahasiswa";
 import EditMahasiswa from "./EditMahasiswa";
 import Loading from "../../../components/admin/Loading.jsx";
+import Swal from 'sweetalert2';
 
 const MasterMahasiswa = () => {
   const [dataMhs, setDataMhs] = useState([]);
@@ -15,14 +16,12 @@ const MasterMahasiswa = () => {
 
   const [dataTerpilih, setDataTerpilih] = useState(null);
   const [isEditTerbuka, setIsEditTerbuka] = useState(false);
-  const [isHapusTerbuka, setIsHapusTerbuka] = useState(false);
 
   const ambilDataMahasiswa = async () => {
     try {
       setLoading(true);
       const data = await mahasiswaAPI.fetchMahasiswa();
       
-      // === PERBAIKAN: Mengurutkan data mahasiswa secara Alfabetis A-Z ===
       let dataTerurut = [];
       if (data && Array.isArray(data)) {
         dataTerurut = [...data].sort((a, b) => {
@@ -35,7 +34,14 @@ const MasterMahasiswa = () => {
       setDataMhs(dataTerurut);
     } catch (error) {
       console.error("Error fetching data:", error);
-      alert("Gagal mengambil data dari database: " + (error.response?.data?.message || error.message));
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Memuat Data',
+        text: error.response?.data?.message || error.message,
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setLoading(false);
     }
@@ -53,15 +59,42 @@ const MasterMahasiswa = () => {
     ambilDataMahasiswa();
   };
 
-  const tanganiHapusMhsDatabase = async () => {
+  const tanganiHapusMhsDatabase = async (mhs) => {
+    const hasilKonfirmasi = await Swal.fire({
+      title: 'Apakah Anda yakin?',
+      text: `Data mahasiswa ${mhs?.nama || ''} (${mhs?.id_mahasiswa || ''}) akan dihapus secara permanen!`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Hapus!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!hasilKonfirmasi.isConfirmed) return;
+
     try {
-      await mahasiswaAPI.deleteMahasiswa(dataTerpilih.id_mahasiswa);
-      setIsHapusTerbuka(false);
-      setDataTerpilih(null);
+      await mahasiswaAPI.deleteMahasiswa(mhs.id_mahasiswa);
+      
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Data mahasiswa berhasil dihapus.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+
       ambilDataMahasiswa();
     } catch (error) {
       console.error("Error deleting data:", error);
-      alert("Gagal menghapus data: " + (error.response?.data?.message || error.message));
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Menghapus',
+        text: error.response?.data?.message || error.message,
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     }
   };
 
@@ -246,8 +279,7 @@ const MasterMahasiswa = () => {
                             <button
                               type="button"
                               onClick={() => {
-                                setDataTerpilih(mhs);
-                                setIsHapusTerbuka(true);
+                                tanganiHapusMhsDatabase(mhs);
                                 if (document.activeElement) document.activeElement.blur();
                               }}
                               className="px-2.5 py-1.5 text-[11px] font-bold rounded-md flex items-center gap-2 hover:bg-red-50 text-red-600 transition"
@@ -287,36 +319,6 @@ const MasterMahasiswa = () => {
         dataTerpilih={dataTerpilih}
         onSuksesEdit={tanganiEditMhsLokal}
       />
-
-      {isHapusTerbuka && dataTerpilih && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-[99999]">
-          <div className="bg-white rounded-xl border border-gray-200 max-w-sm w-full p-5 text-center shadow-2xl animate-scaleUp">
-            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3 text-red-600">
-              <FiAlertTriangle className="text-lg" />
-            </div>
-            <h3 className="text-sm font-bold text-gray-800">Konfirmasi Hapus Data</h3>
-            <p className="text-[11.5px] text-gray-500 mt-1.5 leading-relaxed">
-              Apakah Anda yakin menghapus mahasiswa bernama <strong className="text-gray-800 font-bold">{dataTerpilih.nama}</strong> ({dataTerpilih.id_mahasiswa})? 
-            </p>
-            <div className="grid grid-cols-2 gap-2 mt-5">
-              <button 
-                type="button" 
-                onClick={() => setIsHapusTerbuka(false)} 
-                className="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-semibold py-2 rounded-lg transition border border-gray-200 cursor-pointer"
-              >
-                Batal
-              </button>
-              <button 
-                type="button" 
-                onClick={tanganiHapusMhsDatabase} 
-                className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-2 rounded-lg transition shadow-xs cursor-pointer"
-              >
-                Ya, Hapus Data
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

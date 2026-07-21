@@ -42,7 +42,6 @@ export default function KHS() {
     muatData();
   }, []);
 
-  // === PERBAIKAN UTAMA: Fungsi Konversi Grade ke Angka Bobot 4.00 ===
   const hitungBobotGrade = (grade) => {
     if (!grade) return 0;
     const g = grade.toUpperCase().trim();

@@ -25,7 +25,6 @@ const MasterDosen = () => {
       setPesanEror("");
       const data = await dosenAPI.fetchDosen();
       
-      // === PERBAIKAN: Mengurutkan nama dosen dari A sampai Z ===
       let dataTerurut = [];
       if (data && Array.isArray(data)) {
         dataTerurut = [...data].sort((a, b) => {
@@ -164,7 +163,7 @@ const MasterDosen = () => {
                     <td className="px-4 py-3 text-[13px] font-bold text-slate-800 uppercase">{dsn.nama}</td>
                     <td className="px-4 py-3 text-[13px] text-gray-500 font-medium">{dsn.program_studi}</td>
                     <td className="px-4 py-3 text-[13px] text-gray-500 font-medium">
-                      <span className="text-gray-400 mr-1.5">✉</span>{dsn.email}
+                      <span className="text-gray-400 mr-1.5"></span>{dsn.email}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 text-[10px] font-bold rounded border inline-block leading-none ${

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { dosenAPI } from "../../../services/dosenAPI";
 import { dashboardAPI } from "../../../services/dashboardAdminAPI";
+import Swal from 'sweetalert2';
 
 const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit }) => {
   const [inputEdit, setInputEdit] = useState({
@@ -56,10 +57,26 @@ const EditDosen = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit
 
       onSuksesEdit({ nidn: inputEdit.nidn, ...dataSiapUpdate });
       setIsEditTerbuka(false);
-      alert("Perubahan data dosen berhasil disimpan!");
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Perubahan data dosen berhasil disimpan.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+
     } catch (error) {
       console.error(error);
-      alert("Gagal: " + (error.response?.data?.message || error.message));
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Simpan',
+        text: error.response?.data?.message || error.message,
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
+
     } finally {
       setIsSubmitting(false);
     }

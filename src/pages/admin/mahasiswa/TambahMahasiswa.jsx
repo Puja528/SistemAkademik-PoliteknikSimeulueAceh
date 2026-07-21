@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { mahasiswaAPI } from "../../../services/mahasiswaAPI.js";
 import { supabase } from "../../../supabaseClient";
+import Swal from 'sweetalert2';
 
 const TambahMahasiswa = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }) => {
   const [inputBaru, setInputBaru] = useState({
@@ -96,12 +97,29 @@ const TambahMahasiswa = ({ isTambahTerbuka, setIsTambahTerbuka, onSuksesSimpan }
       };
 
       await mahasiswaAPI.createMahasiswa(dataSiapSimpan);
-      onSuksesSimpan();
       tutupModal();
-      alert("Mahasiswa berhasil didaftarkan!");
+      
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Mahasiswa berhasil didaftarkan!',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+
+      if (onSuksesSimpan) {
+        onSuksesSimpan();
+      }
     } catch (error) {
       console.error("Detail Error:", error);
-      alert("Gagal: " + error.message);
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Simpan',
+        text: error.message || 'Gagal memproses pendaftaran mahasiswa.',
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setIsSubmitting(false);
     }

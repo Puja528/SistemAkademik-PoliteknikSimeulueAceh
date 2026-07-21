@@ -10,16 +10,13 @@ export default function Jadwal() {
   const [selectedMataKuliah, setSelectedMataKuliah] = useState(null);
   const [viewMode, setViewMode] = useState("all"); 
 
-  // ── STATE DINAMIS DATABASE ──
   const [dataJadwalReal, setDataJadwalReal] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [profilDosen, setProfilDosen] = useState(null);
 
-  // Solusi 1: Mengubah info hari ini agar dinamis & sinkron dengan waktu asli laptop
   const [infoHariIni, setInfoHariIni] = useState({ namaHari: "Senin", tanggal: "" });
 
   useEffect(() => {
-    // Set hari dan tanggal dinamis saat komponen dimuat
     const hariIndo = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
     const tglSekarang = new Date();
     setInfoHariIni({
@@ -32,15 +29,11 @@ export default function Jadwal() {
         setIsLoading(true);
         const localSession = localStorage.getItem("siakad_session");
         if (!localSession) return;
-
         const dataUserLogin = JSON.parse(localSession);
-
-        // 1. Ambil NIDN dosen pengampu berdasarkan UUID Auth
         const dosenReal = await dosenAPI.fetchDosenByUserId(dataUserLogin.id);
         if (!dosenReal) return;
         setProfilDosen(dosenReal);
 
-        // 2. Ambil semua jadwal, lalu filter yang nidn_dosen-nya cocok
         const semuaJadwal = await jadwalAPI.fetchJadwal();
         const jadwalSaya = semuaJadwal.filter(
           (j) => j.nidn_dosen === dosenReal.nidn,
@@ -55,7 +48,6 @@ export default function Jadwal() {
     muatJadwalDosen();
   }, []);
 
-  // Memetakan jadwal ke format kalender mingguan
   const formatJadwalMingguan = () => {
     const hariList = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
     const penampung = { Senin: [], Selasa: [], Rabu: [], Kamis: [], Jumat: [] };
@@ -76,8 +68,6 @@ export default function Jadwal() {
   };
 
   const jadwalSeminggu = formatJadwalMingguan();
-
-  // Solusi 3: Menambahkan method .trim() agar pencarian string lebih kebal error space
   const isCardVisible = (namaMk) => {
     if (!selectedMataKuliah) return true;
     return namaMk.trim().toLowerCase() === selectedMataKuliah.trim().toLowerCase();

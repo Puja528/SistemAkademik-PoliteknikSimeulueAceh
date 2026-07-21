@@ -4,6 +4,7 @@ import { jadwalAPI } from "../../../services/jadwalAPI";
 import BuatJadwalBaru from "./TambahJadwal";
 import EditJadwal from "./EditJadwal";
 import Loading from "../../../components/admin/Loading";
+import Swal from 'sweetalert2';
 
 const MasterJadwal = () => {
   const [dataJadwal, setDataJadwal] = useState([]);
@@ -34,32 +35,82 @@ const MasterJadwal = () => {
   }, []);
 
   const tanganiHapusSatu = async (id) => {
-    if (window.confirm("Yakin ingin menghapus jadwal ini?")) {
-      try {
-        await jadwalAPI.deleteJadwal(id);
-        setJadwalTerpilih(jadwalTerpilih.filter(item => item !== id));
-        muatData();
-        alert("Jadwal perkuliahan berhasil dihapus!");
-      } catch (error) {
-        console.error("Error network:", error);
-        alert("Gagal menghapus jadwal: Terjadi masalah koneksi ke server.");
-      }
+    const hasilKonfirmasi = await Swal.fire({
+      title: 'Apakah Anda yakin?',
+      text: 'Jadwal perkuliahan ini akan dihapus secara permanen!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Hapus!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!hasilKonfirmasi.isConfirmed) return;
+
+    try {
+      await jadwalAPI.deleteJadwal(id);
+      setJadwalTerpilih(jadwalTerpilih.filter(item => item !== id));
+      muatData();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Jadwal perkuliahan berhasil dihapus!',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+    } catch (error) {
+      console.error("Error network:", error);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Menghapus',
+        text: 'Gagal menghapus jadwal: Terjadi masalah koneksi ke server.',
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     }
   };
 
   const tanganiHapusBanyak = async () => {
-    if (window.confirm(`Yakin hapus ${jadwalTerpilih.length} jadwal terpilih?`)) {
-      try {
-        for (const id of jadwalTerpilih) {
-          await jadwalAPI.deleteJadwal(id);
-        }
-        setJadwalTerpilih([]);
-        muatData();
-        alert("Semua jadwal terpilih berhasil dihapus!");
-      } catch (error) {
-        console.error("Error network:", error);
-        alert("Beberapa jadwal gagal dihapus akibat gangguan koneksi server.");
+    const hasilKonfirmasi = await Swal.fire({
+      title: 'Apakah Anda yakin?',
+      text: `Yakin ingin menghapus ${jadwalTerpilih.length} jadwal terpilih?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Hapus Semua!',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!hasilKonfirmasi.isConfirmed) return;
+
+    try {
+      for (const id of jadwalTerpilih) {
+        await jadwalAPI.deleteJadwal(id);
       }
+      setJadwalTerpilih([]);
+      muatData();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Semua jadwal terpilih berhasil dihapus!',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+    } catch (error) {
+      console.error("Error network:", error);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Menghapus',
+        text: 'Beberapa jadwal gagal dihapus akibat gangguan koneksi server.',
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     }
   };
 
@@ -237,8 +288,8 @@ const MasterJadwal = () => {
       )}
 
       {/* OVERLAY MODALS */}
-      <BuatJadwalBaru isModalTerbuka={isModalTerbuka} setIsModalTerbuka={setIsModalTerbuka} onSuksesSimpan={() => { muatData(); alert("Jadwal perkuliahan baru berhasil ditambahkan!"); }} />
-      <EditJadwal isEditTerbuka={isEditTerbuka} setIsEditTerbuka={setIsEditTerbuka} dataEdit={jadwalEdit} onSuksesEdit={() => { muatData(); alert("Perubahan data jadwal berhasil diperbarui!"); }} />
+      <BuatJadwalBaru isModalTerbuka={isModalTerbuka} setIsModalTerbuka={setIsModalTerbuka} onSuksesSimpan={() => { muatData(); }} />
+      <EditJadwal isEditTerbuka={isEditTerbuka} setIsEditTerbuka={setIsEditTerbuka} dataEdit={jadwalEdit} onSuksesEdit={() => { muatData(); }} />
     </div>
   );
 };

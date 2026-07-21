@@ -112,7 +112,7 @@ export default function Absensi() {
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* SISI KIRI: PROGRES TIAP MK */}
         <div className="lg:col-span-2 space-y-3">
-          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wide">📊 Detail Kehadiran per Mata Kuliah</h3>
+          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wide"> Detail Kehadiran per Mata Kuliah</h3>
           <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 shadow-sm">
             {matakuliah.map((mk) => {
               const diBawahAmbangBatas = mk.persentase < 75;
@@ -139,7 +139,7 @@ export default function Absensi() {
 
                   {/* Peringatan jika kehadiran kurang dari 75% */}
                   {diBawahAmbangBatas && (
-                    <p className="text-[10px] text-rose-500 font-medium tracking-wide">⚠️ Kehadiran di bawah 75%, Anda terancam tidak dapat mengikuti UAS.</p>
+                    <p className="text-[10px] text-rose-500 font-medium tracking-wide"> Kehadiran di bawah 75%, Anda terancam tidak dapat mengikuti UAS.</p>
                   )}
                 </div>
               );
@@ -152,7 +152,7 @@ export default function Absensi() {
 
         {/* SISI KANAN: LOG AKTIVITAS ABSENSI */}
         <div className="space-y-3">
-          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wide">⏱️ Log Absensi Terakhir</h3>
+          <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wide"> Log Absensi Terakhir</h3>
           <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3 shadow-sm">
             {dataAbsen.slice(-5).reverse().map((log) => {
               const isHadir = log.status_kehadiran === 'Hadir';

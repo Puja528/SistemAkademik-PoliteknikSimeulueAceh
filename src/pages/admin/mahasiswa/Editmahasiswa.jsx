@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { mahasiswaAPI } from "../../../services/mahasiswaAPI.js"; 
 import { supabase } from "../../../supabaseClient";
+import Swal from 'sweetalert2';
 
 const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSuksesEdit }) => {
   const [inputEdit, setInputEdit] = useState({
@@ -71,13 +72,29 @@ const EditMahasiswa = ({ isEditTerbuka, setIsEditTerbuka, dataTerpilih, onSukses
 
     try {
       await mahasiswaAPI.updateMahasiswa(inputEdit.id_mahasiswa, dataSiapUpdate);
-      
-      onSuksesEdit({ id_mahasiswa: inputEdit.id_mahasiswa, ...dataSiapUpdate }); 
       setIsEditTerbuka(false); 
-      alert("Perubahan data mahasiswa berhasil disimpan!");
+      
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Perubahan data mahasiswa berhasil disimpan!',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+
+      if (onSuksesEdit) {
+        onSuksesEdit({ id_mahasiswa: inputEdit.id_mahasiswa, ...dataSiapUpdate });
+      }
     } catch (error) {
       console.error("Error updating data:", error);
-      alert("Gagal: " + (error.response?.data?.message || error.message));
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Simpan',
+        text: error.response?.data?.message || error.message,
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setIsSubmitting(false);
     }

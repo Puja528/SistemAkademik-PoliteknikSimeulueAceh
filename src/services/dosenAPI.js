@@ -60,7 +60,6 @@ export const dosenAPI = {
         return response.data;
     },
 
-    // ── FIXED DASHBOARD DATA (Mengatasi Error 400 Bad Request) ──
     async fetchDashboardData(nidn) {
         try {
             const hariIni = new Date().toLocaleDateString("id-ID", { weekday: "long" });

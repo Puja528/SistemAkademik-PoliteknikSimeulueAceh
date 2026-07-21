@@ -4,6 +4,7 @@ import { nilaiAPI } from "../../services/nilaiAPI";
 import { jadwalAPI } from "../../services/jadwalAPI";
 import { dosenAPI } from "../../services/dosenAPI";
 import axios from "axios";
+import Swal from 'sweetalert2';
 
 export default function Nilai() {
   const [daftarJadwal, setDaftarJadwal] = useState([]);
@@ -14,12 +15,9 @@ export default function Nilai() {
   const [isLocked, setIsLocked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // === State modal edit ===
-  const [modalEdit, setModalEdit] = useState(null); // null | id_mahasiswa
-
+  const [modalEdit, setModalEdit] = useState(null); 
   const bobotPenilaian = { tugas: 30, uts: 30, uas: 40 };
 
-  // Menentukan apakah rapor sudah pernah dikirim (status 'Draft' atau 'Terbit')
   const sudahPernahDikirim =
     jadwalDetail?.status_nilai === "Draft" ||
     jadwalDetail?.status_nilai === "Terbit";
@@ -60,7 +58,6 @@ export default function Nilai() {
     muatDaftarJadwalTerbaru();
   }, []);
 
-  // PERBAIKAN: Menambahkan jadwalDetail?.status_nilai ke dependency array agar peka terhadap perubahan status terbaru
   useEffect(() => {
     if (idJadwalTerpilih) {
       muatLembarNilaiMahasiswa();
@@ -89,7 +86,6 @@ export default function Nilai() {
 
       const masterMhs = resMhs.data || [];
 
-      // === PERBAIKAN: Mengurutkan nama mahasiswa dari A sampai Z ===
       masterMhs.sort((a, b) => {
         const namaA = (a.nama || "").toUpperCase();
         const namaB = (b.nama || "").toUpperCase();
@@ -101,7 +97,7 @@ export default function Nilai() {
           (n) => n.id_mahasiswa === mhs.id_mahasiswa,
         );
         return {
-          no: idx + 1, // Nomor otomatis mengikuti urutan abjad yang baru
+          no: idx + 1,
           id_mahasiswa: mhs.id_mahasiswa,
           nama: mhs.nama,
           tugas: matchNilai ? matchNilai.nilai_tugas : 0,
@@ -158,8 +154,17 @@ export default function Nilai() {
   };
 
   const handleSimpan = async () => {
-    if (isLocked) return alert("Nilai terkunci, tidak bisa diubah.");
+    if (isLocked) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Nilai Terkunci',
+        text: 'Nilai terkunci, tidak bisa diubah.',
+        confirmButtonColor: '#3085d6',
+      });
+    }
+
     setIsLoading(true);
+
     try {
       const payloadArray = daftarMahasiswa.map((mhs) => ({
         id_jadwal: parseInt(idJadwalTerpilih),
@@ -174,17 +179,30 @@ export default function Nilai() {
       await nilaiAPI.simpanNilaiMahasiswa(payloadArray);
       await nilaiAPI.updateStatusJadwalNilai(idJadwalTerpilih, "Draft");
 
-      // PERBAIKAN: Muat ulang jadwal dan lembar kerja untuk memperbarui state UI secara aktual
+      // Muat ulang jadwal dan lembar kerja untuk memperbarui state UI secara aktual
       await muatDaftarJadwalTerbaru(idJadwalTerpilih);
       await muatLembarNilaiMahasiswa();
 
-      alert(
-        jadwalDetail?.status_nilai === "Draft"
-          ? "Ajuan perubahan nilai berhasil dikirim!"
-          : "Nilai mahasiswa berhasil dikirim ke Admin!",
-      );
+      const pesanSukses = jadwalDetail?.status_nilai === "Draft"
+        ? "Ajuan perubahan nilai berhasil dikirim!"
+        : "Nilai mahasiswa berhasil dikirim ke Admin!";
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: pesanSukses,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#3085d6',
+      });
+
     } catch (error) {
-      alert("Gagal memproses nilai: " + error.message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Memproses',
+        text: 'Gagal memproses nilai: ' + (error.response?.data?.message || error.message),
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#d33',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -197,7 +215,6 @@ export default function Nilai() {
     ? daftarMahasiswa.find((m) => m.id_mahasiswa === modalEdit)
     : null;
 
-  // Penentuan teks & style tombol utama secara dinamis
   let tombolTeks = "Kirim Rapor ke Admin";
   let tombolStyle = "bg-green-600 hover:bg-green-700 text-white cursor-pointer";
 
@@ -360,7 +377,7 @@ export default function Nilai() {
                     <input
                       type="number"
                       value={mhs.tugas}
-                      disabled={sudahPernahDikirim} // Terkunci & Abu-abu jika sudah dikirim ke admin
+                      disabled={sudahPernahDikirim} 
                       onChange={(e) =>
                         handleNilaiChange(
                           mhs.id_mahasiswa,
@@ -375,7 +392,7 @@ export default function Nilai() {
                     <input
                       type="number"
                       value={mhs.uts}
-                      disabled={sudahPernahDikirim} // Terkunci & Abu-abu jika sudah dikirim ke admin
+                      disabled={sudahPernahDikirim}
                       onChange={(e) =>
                         handleNilaiChange(
                           mhs.id_mahasiswa,
@@ -390,7 +407,7 @@ export default function Nilai() {
                     <input
                       type="number"
                       value={mhs.uas}
-                      disabled={sudahPernahDikirim} // Terkunci & Abu-abu jika sudah dikirim ke admin
+                      disabled={sudahPernahDikirim} 
                       onChange={(e) =>
                         handleNilaiChange(
                           mhs.id_mahasiswa,
@@ -414,7 +431,7 @@ export default function Nilai() {
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => bukaModalEdit(mhs.id_mahasiswa)}
-                      disabled={isLocked} // Hanya terkunci jika status sudah 'Terbit'
+                      disabled={isLocked} 
                       title={
                         isLocked
                           ? "Nilai sudah diterbitkan"
@@ -437,7 +454,7 @@ export default function Nilai() {
         </div>
       </div>
 
-      {/* === MODAL EDIT NILAI === */}
+      {/* MODAL EDIT NILAI */}
       {modalEdit && mhsModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
